@@ -28,52 +28,72 @@ import SchemaManager from 'tf2-schema';
 const COMMANDS: string[] = [
     '!help - Get list of commands',
     '!how2trade - Guide on how to use and trade with the bot',
-    '!time - Show owner current time 🕥',
-    '!price [amount] <name> - Get the price and stock of an item',
-    '!stock - Get a list of items that the bot has',
-    '!pure - Get current pure stock 💰',
-    '!rate - Get current key prices 🔑',
-    '!craftweapon - get a list of craft weapon stock 🔫',
-    '!uncraftweapon - get a list of uncraft weapon stock 🔫',
-    '!message <your message> - Send a message to the owner of the bot 💬',
-    '!buy [amount] <name> - Instantly buy an item 💲',
+
+    '\n!buy [amount] <name> - Instantly buy an item 💲',
     '!sell [amount] <name> - Instantly sell an item 💲',
-    '!buycart [amount] <name> - Adds an item you want to buy to the cart 🛒',
+    '!price [amount] <name> - Get the price and stock of an item 💲📦',
+
+    '\n!pure - Get current pure stock 💰',
+    '!rate - Get current key prices 🔑',
+
+    '\n!buycart [amount] <name> - Adds an item you want to buy to the cart 🛒',
     '!sellcart [amount] <name> - Adds an item you want to sell to the cart 🛒',
     '!cart - See current cart 🛒',
     '!clearcart - Clears the current cart ❎🛒',
     '!checkout - Make the bot send an offer the items in the cart ✅🛒',
-    '!queue - See your position in the queue',
-    '!cancel - Cancel an already made offer, or cancel offer being made ❌',
-    '!sales sku=<item sku> - get sales history for an item'
+
+    '\n!cancel - Cancel an already made offer, or cancel offer being made ❌',
+
+    '\n!queue - See your position in the queue',
+
+    '\n!message <your message> - Send a message to the owner of the bot 💬',
+    '!time - Show owner current time 🕥',
+
+    '!stock - Get a list of items that the bot has',
+    '!craftweapon - get a list of craft weapon stock 🔫',
+    '\n!uncraftweapon - get a list of uncraft weapon stock 🔫',
+
+    '\n!sales sku=<item sku> - get sales history for an item'
 ];
 
 const ADMIN_COMMANDS: string[] = [
     '!deposit <name=>&<amount=> - Used to deposit items',
     '!withdraw <name=>&<amount=> - Used to withdraw items',
-    '!add - Add a pricelist entry ➕',
+
+    '\n!add - Add a pricelist entry ➕',
     '!update - Update a pricelist entry',
-    '!relist - Perform relist if some of your listings are missing (you can run only once, then need to wait 30 minutes if you want to run it again)',
     '!remove <sku=> OR <item=> - Remove a pricelist entry ➖',
     '!get <sku=> OR <item=> - Get raw information about a pricelist entry',
-    '!pricecheck <sku=> OR <item=> - Requests an item to be priced by PricesTF',
+
+    '\n!relist - Perform relist if some of your listings are missing (you can run only once, then need to wait 30 minutes if you want to run it again)',
+    '!resetqueue - Reset queue position to 0',
+
+    '\n!pricecheck <sku=> OR <item=> - Requests an item to be priced by PricesTF',
     '!pricecheckall - Automatically request all items in your inventory to be checked by Prices.TF.',
     '!check sku=<item sku> - Request current price for an item from Prices.TF',
-    '!expand <craftable=true|false> - Uses Backpack Expanders to increase the inventory limit',
+
+    '\n!expand <craftable=true|false> - Uses Backpack Expanders to increase the inventory limit',
     '!delete sku=<item sku> OR assetid=<item assetid> - Delete any item (use only sku) 🚮',
-    '!inventory - Get my current inventory spaces 🎒',
-    '!stop - Stop the bot 🔴',
+
+    '\n!inventory - Get my current inventory spaces 🎒',
+
+    '\n!stop - Stop the bot 🔴',
     '!restart - Restart the bot 🔄',
     '!version - Get version that the bot is running',
-    '!autokeys - Get info on your current autoBuy/Sell Keys settings 🔑',
-    '!resfreshautokeys - Refresh your autokeys settings.',
-    '!avatar <image_URL> - Change avatar',
+
+    '\n!autokeys - Get info on your current autoBuy/Sell Keys settings 🔑',
+    '!refreshautokeys - Refresh your autokeys settings.',
+
+    '\n!avatar <image_URL> - Change avatar',
     '!name <new_name> - Change name',
-    '!block <steamid> - Block a specific user',
+
+    '\n!block <steamid> - Block a specific user',
     '!unblock <steamid> - Unblock specific user',
-    '!stats - Get statistics for accepted trades 📊',
-    '!trades - Get a list of offers pending for manual review 🔍',
-    '!trade <offerID> - Get info about a trade 🔍',
+
+    '\n!stats - Get statistics for accepted trades 📊',
+
+    '\n!trades - Get a list of offers pending for manual review 🔍',
+    '!trade <offerID> - Get info about a trade',
     '!accept <offerID> [Your Message] - Manually accept an active offer ✅🔍',
     '!decline <offerID> [Your Message] - Manually decline an active offer ❌🔍',
     '!message <steamid> <your message> - Send a message to a user 💬'
@@ -159,6 +179,8 @@ export = class Commands {
             this.checkoutCommand(steamID);
         } else if (command === 'queue') {
             this.queueCommand(steamID);
+        } else if (command === 'resetqueue') {
+            this.resetQueueCommand(steamID);
         } else if (command === 'cancel') {
             this.cancelCommand(steamID);
         } else if (command === 'deposit' && isAdmin) {
@@ -484,7 +506,7 @@ export = class Commands {
 
         this.bot.sendMessage(
             steamID,
-            `🎒 My crrent items in my inventory: ${currentItems + (backpackSlots !== 0 ? '/' + backpackSlots : '')}`
+            `🎒 My current items in my inventory: ${currentItems + (backpackSlots !== 0 ? '/' + backpackSlots : '')}`
         );
     }
 
@@ -744,6 +766,11 @@ export = class Commands {
         }
     }
 
+    private resetQueueCommand(steamID: SteamID): void {
+        this.cartQueue.resetQueue();
+        this.bot.sendMessage(steamID, '✅ Sucessfully reset queue!');
+    }
+
     private cancelCommand(steamID: SteamID): void {
         // Maybe have the cancel command only cancel the offer in the queue, and have a command for canceling the offer?
 
@@ -836,51 +863,6 @@ export = class Commands {
                         (currentPosition !== 1 ? 'are' : 'is') +
                         ` ${currentPosition} infront of you.`
                 );
-                clearTimeout(this.queuePositionCheck);
-                log.debug(`Checking queue position in 3 minutes...`);
-                this.queuePositionCheck = setTimeout(() => {
-                    // Check position after 3 minutes
-                    log.debug(`Current queue position: ${position}`);
-                    if (this.cartQueue.getPosition(cart.partner) >= 1) {
-                        if (
-                            process.env.DISABLE_DISCORD_WEBHOOK_SOMETHING_WRONG_ALERT === 'false' &&
-                            process.env.DISCORD_WEBHOOK_SOMETHING_WRONG_ALERT_URL
-                        ) {
-                            const time = (this.bot.handler as MyHandler).timeWithEmoji();
-                            this.discord.sendQueueAlert(position + 1, time.time);
-                            this.bot.botManager
-                                .restartProcess()
-                                .then(restarting => {
-                                    if (!restarting) {
-                                        this.discord.sendQueueAlertFailedPM2(time.time);
-                                    }
-                                })
-                                .catch(err => {
-                                    log.warn('Error occurred while trying to restart: ', err);
-                                    this.discord.sendQueueAlertFailedError(err.message, time.time);
-                                });
-                        } else {
-                            this.bot.messageAdmins(`⚠️ [Queue alert] Current position: ${position + 1}`, []);
-                            this.bot.botManager
-                                .restartProcess()
-                                .then(restarting => {
-                                    if (!restarting) {
-                                        this.bot.messageAdmins(
-                                            '❌ Automatic restart on queue problem failed because are not running the bot with PM2! See the documentation: https://github.com/idinium96/tf2autobot/wiki/e.-Running-with-PM2',
-                                            []
-                                        );
-                                    }
-                                })
-                                .catch(err => {
-                                    log.warn('Error occurred while trying to restart: ', err);
-                                    this.bot.messageAdmins(
-                                        `❌ An error occurred while trying to restart: ${err.message}`,
-                                        []
-                                    );
-                                });
-                        }
-                    }
-                }, 3 * 60 * 1000);
             }
             return;
         }
@@ -894,50 +876,6 @@ export = class Commands {
                     (position !== 1 ? 'are' : 'is') +
                     ` ${position} infront of you.`
             );
-            clearTimeout(this.queuePositionCheck);
-            log.debug(`Checking queue position in 3 minutes...`);
-            this.queuePositionCheck = setTimeout(() => {
-                // Check position after 3 minutes
-                if (this.cartQueue.enqueue(cart) >= 2) {
-                    if (
-                        process.env.DISABLE_DISCORD_WEBHOOK_SOMETHING_WRONG_ALERT === 'false' &&
-                        process.env.DISCORD_WEBHOOK_SOMETHING_WRONG_ALERT_URL
-                    ) {
-                        const time = (this.bot.handler as MyHandler).timeWithEmoji();
-                        this.discord.sendQueueAlert(position + 1, time.time);
-                        this.bot.botManager
-                            .restartProcess()
-                            .then(restarting => {
-                                if (!restarting) {
-                                    this.discord.sendQueueAlertFailedPM2(time.time);
-                                }
-                            })
-                            .catch(err => {
-                                log.warn('Error occurred while trying to restart: ', err);
-                                this.discord.sendQueueAlertFailedError(err.message, time.time);
-                            });
-                    } else {
-                        this.bot.messageAdmins(`⚠️ [Queue alert] Current position: ${position + 1}`, []);
-                        this.bot.botManager
-                            .restartProcess()
-                            .then(restarting => {
-                                if (!restarting) {
-                                    this.bot.messageAdmins(
-                                        '❌ Automatic restart on queue problem failed because are not running the bot with PM2! See the documentation: https://github.com/idinium96/tf2autobot/wiki/e.-Running-with-PM2',
-                                        []
-                                    );
-                                }
-                            })
-                            .catch(err => {
-                                log.warn('Error occurred while trying to restart: ', err);
-                                this.bot.messageAdmins(
-                                    `❌ An error occurred while trying to restart: ${err.message}`,
-                                    []
-                                );
-                            });
-                    }
-                }
-            }, 3 * 60 * 1000);
         }
     }
 
@@ -1571,14 +1509,17 @@ export = class Commands {
 
         const total = pricelist.length;
         const totalTime = total * 2 * 1000;
+        const aSecond = 1 * 1000;
+        const aMin = 1 * 60 * 1000;
+        const anHour = 1 * 60 * 60 * 1000;
         this.bot.sendMessage(
             steamID,
             `⌛ Price check requested for ${total} items, will be done in approximately ${
-                totalTime < 1 * 60 * 1000
-                    ? `${Math.round(totalTime / 1000)} seconds.`
-                    : totalTime < 1 * 60 * 60 * 1000
-                    ? `${Math.round(totalTime / (1 * 60 * 1000))} minutes.`
-                    : `${Math.round(totalTime / (1 * 60 * 60 * 1000))} hours.`
+                totalTime < aMin
+                    ? `${Math.round(totalTime / aSecond)} seconds.`
+                    : totalTime < anHour
+                    ? `${Math.round(totalTime / aMin)} minutes.`
+                    : `${Math.round(totalTime / anHour)} hours.`
             } (every 2 seconds for each items).`
         );
 
