@@ -258,7 +258,7 @@ export = class Commands {
     }
 
     private helpCommand(steamID: SteamID): void {
-        let reply = `📜 Here's a list of all my commands:\n\n- ${COMMANDS.join('\n- ')}`;
+        let reply = `📜 Here's a list of my commands:\n\n- ${COMMANDS.join('\n- ')}`;
 
         if (this.bot.isAdmin(steamID)) {
             reply += `\n\n\nAdmin commands:\n\n- ${ADMIN_COMMANDS.join('\n- ')}`;
