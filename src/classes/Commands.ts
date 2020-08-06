@@ -261,7 +261,7 @@ export = class Commands {
         let reply = `📜 Here's a list of all my commands:\n\n- ${COMMANDS.join('\n- ')}`;
 
         if (this.bot.isAdmin(steamID)) {
-            reply += `\n\nAdmin commands:\n\n- ${ADMIN_COMMANDS.join('\n- ')}`;
+            reply += `\n\n\nAdmin commands:\n\n- ${ADMIN_COMMANDS.join('\n- ')}`;
         }
 
         this.bot.sendMessage(steamID, reply);
