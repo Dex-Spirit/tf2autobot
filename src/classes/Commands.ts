@@ -33,9 +33,6 @@ const COMMANDS: string[] = [
     '!sell [amount] <name> - Instantly sell an item 💲',
     '!price [amount] <name> - Get the price and stock of an item 💲📦\n',
 
-    '!pure - Get current pure stock 💰',
-    '!rate - Get current key prices 🔑\n',
-
     '!buycart [amount] <name> - Adds an item you want to buy to the cart 🛒',
     '!sellcart [amount] <name> - Adds an item you want to sell to the cart 🛒',
     '!cart - See current cart 🛒',
@@ -44,10 +41,17 @@ const COMMANDS: string[] = [
 
     '!cancel - Cancel an already made offer, or cancel offer being made ❌\n',
 
-    '!queue - See your position in the queue\n',
+    '!queue - See your position in the queue\n\n',
 
+    '!more - Show advanced commands list'
+];
+
+const MORE: string[] = [
     '!message <your message> - Send a message to the owner of the bot 💬',
     '!time - Show owner current time 🕥\n',
+
+    '!pure - Get current pure stock 💰',
+    '!rate - Get current key prices 🔑\n',
 
     '!stock - Get a list of items that the bot has',
     '!craftweapon - get a list of craft weapon stock 🔫',
@@ -145,6 +149,8 @@ export = class Commands {
 
         if (command === 'help') {
             this.helpCommand(steamID);
+        } else if (command === 'more') {
+            this.moreCommand(steamID);
         } else if (command === 'how2trade') {
             this.howToTradeCommand(steamID);
         } else if (command === 'price') {
@@ -257,6 +263,12 @@ export = class Commands {
         if (this.bot.isAdmin(steamID)) {
             reply += `\n\nAdmin commands:\n- ${ADMIN_COMMANDS.join('\n- ')}`;
         }
+
+        this.bot.sendMessage(steamID, reply);
+    }
+
+    private moreCommand(steamID: SteamID): void {
+        const reply = `Advanced commands list:\n- ${MORE.join('\n- ')}`;
 
         this.bot.sendMessage(steamID, reply);
     }
