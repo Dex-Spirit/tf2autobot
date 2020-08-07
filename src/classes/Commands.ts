@@ -38,6 +38,7 @@ const COMMANDS: string[] = [
     '!checkout - Make the bot send an offer the items in the cart ✅🛒\n\n=== Trade actions ===',
     '!cancel - Cancel an already made offer, or cancel offer being made ❌',
     '!queue - See your position in the queue\n',
+
     '!more - Show advanced commands list'
 ];
 
@@ -130,6 +131,8 @@ export = class Commands {
 
         if (command === 'help') {
             this.helpCommand(steamID);
+        } else if (command === 'more') {
+            this.moreCommand(steamID);
         } else if (command === 'how2trade') {
             this.howToTradeCommand(steamID);
         } else if (command === 'price') {
@@ -702,9 +705,6 @@ export = class Commands {
             if (!recipientSteamID.isValid()) {
                 this.bot.sendMessage(steamID, `❌ "${recipient}" is not a valid steamid.`);
                 return;
-            } else if (!this.bot.friends.isFriend(recipientSteamID)) {
-                this.bot.sendMessage(steamID, '❌ I am not friends with the user.');
-                return;
             }
 
             const recipentDetails = this.bot.friends.getFriend(recipientSteamID);
@@ -712,10 +712,7 @@ export = class Commands {
             const reply = message.substr(message.toLowerCase().indexOf(recipient) + 18);
 
             // Send message to recipient
-            this.bot.sendMessage(
-                recipient,
-                `/quote 💬 Message from ${adminDetails ? adminDetails.player_name : 'admin'}: ${reply}`
-            );
+            this.bot.sendMessage(recipient, `/quote 💬 Message from owner: ${reply}`);
 
             // Send confirmation message to admin
             this.bot.sendMessage(steamID, '✅ Your message has been sent.');
