@@ -37,14 +37,14 @@ const COMMANDS: string[] = [
     '!clearcart - Clears the current cart ❎🛒',
     '!checkout - Make the bot send an offer the items in the cart ✅🛒\n\n📌=== Trade actions ===📌',
     '!cancel - Cancel an already made offer, or cancel offer being made ❌',
-    '!queue - See your position in the queue\n',
+    '!queue - See your position in the queue\n\n📌=== Owner ===📌',
+    '!message <your message> - Send a message to the owner of the bot 💬',
+    '!time - Show owner current time 🕥\n',
 
     '!more - Show advanced commands list'
 ];
 
 const MORE: string[] = [
-    '!message <your message> - Send a message to the owner of the bot 💬',
-    '!time - Show owner current time 🕥\n\n📌=== Pure ===📌',
     '!pure - Get current pure stock 💰',
     '!rate - Get current key prices 🔑\n\n📌=== Items list ===📌',
     '!stock - Get a list of items that the bot has',
@@ -255,7 +255,7 @@ export = class Commands {
     }
 
     private moreCommand(steamID: SteamID): void {
-        this.bot.sendMessage(steamID, `Advanced commands list:\n\n📌=== Owner ===📌\n- ${MORE.join('\n- ')}`);
+        this.bot.sendMessage(steamID, `Advanced commands list:\n\n📌=== Pure ===📌\n- ${MORE.join('\n- ')}`);
     }
 
     private howToTradeCommand(steamID: SteamID): void {
