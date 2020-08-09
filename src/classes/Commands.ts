@@ -248,7 +248,7 @@ export = class Commands {
         let reply = `📜 Here's a list of my commands:\n- ${isAdmin ? forAdmin.join('\n- ') : COMMANDS.join('\n- ')}`;
 
         if (isAdmin) {
-            reply += `\n📌=== Owner ===📌\n- ${MORE.join('\n- ')}\n\nAdmin commands:\n- ${ADMIN_COMMANDS.join('\n- ')}`;
+            reply += `\n📌=== Pure ===📌\n- ${MORE.join('\n- ')}\n\nAdmin commands:\n- ${ADMIN_COMMANDS.join('\n- ')}`;
         }
 
         this.bot.sendMessage(steamID, reply);
