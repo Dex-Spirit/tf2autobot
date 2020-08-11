@@ -29,21 +29,21 @@ import Autokeys from './Autokeys';
 const COMMANDS: string[] = [
     '!help - Get list of commands',
     '!how2trade - Guide on how to use and trade with the bot',
-    '!price [amount] <name> - Get the price and stock of an item 💲📦\n\n✨=== Instant item trade ===✨',
+    '!price [amount] <name> - Get the price and stock of an item 💲📦\n\n📌=== Instant item trade ===📌',
     '!buy [amount] <name> - Instantly buy an item 💲',
-    '!sell [amount] <name> - Instantly sell an item 💲\n\n✨=== Multiple items trade ===✨',
+    '!sell [amount] <name> - Instantly sell an item 💲\n\n📌=== Multiple items trade ===📌',
     '!buycart [amount] <name> - Adds an item you want to buy to the cart 🛒',
     '!sellcart [amount] <name> - Adds an item you want to sell to the cart 🛒',
     '!cart - See current cart 🛒',
     '!clearcart - Clears the current cart ❎🛒',
-    '!checkout - Make the bot send an offer the items in the cart ✅🛒\n\n✨=== Trade actions ===✨',
+    '!checkout - Make the bot send an offer the items in the cart ✅🛒\n\n📌=== Trade actions ===📌',
     '!cancel - Cancel an already made offer, or cancel offer being made ❌',
-    '!queue - See your position in the queue\n',
+    '!queue - See your position in the queue\n\n📌=== Contact Owner ===📌',
+    '!message <your message> - Send a message to the owner of the bot 💬\n\n',
     '!more - Show advanced commands list'
 ];
 
 const MORE: string[] = [
-    '!message <your message> - Send a message to the owner of the bot 💬',
     '!autokeys - Get info on my current autokeys settings 🔑',
     '!time - Show owner current time 🕥',
     '!pure - Get current pure stock 💰',
@@ -56,11 +56,11 @@ const MORE: string[] = [
 
 const ADMIN_COMMANDS: string[] = [
     '!deposit <name=>&<amount=> - Used to deposit items',
-    '!withdraw <name=>&<amount=> - Used to withdraw items\n\n✨=== Pricelist manager ===✨',
+    '!withdraw <name=>&<amount=> - Used to withdraw items\n\n📌=== Pricelist manager ===📌',
     '!add - Add a pricelist entry ➕',
     '!update - Update a pricelist entry',
     '!remove <sku=> OR <item=> - Remove a pricelist entry ➖',
-    '!get <sku=> OR <item=> - Get raw information about a pricelist entry\n\n✨=== Bot manager ===✨',
+    '!get <sku=> OR <item=> - Get raw information about a pricelist entry\n\n📌=== Bot manager ===📌',
     '!expand <craftable=true|false> - Uses Backpack Expanders to increase the inventory limit',
     '!delete sku=<item sku> OR assetid=<item assetid> - Delete any item (use only sku) 🚮',
     '!name <new_name> - Change name',
@@ -72,14 +72,14 @@ const ADMIN_COMMANDS: string[] = [
     '!restart - Restart the bot 🔄',
     '!refreshautokeys - Refresh your autokeys settings.',
     '!relist - Perform relisting.',
-    '!resetqueue - Reset queue position to 0\n\n✨=== Bot status ===✨',
+    '!resetqueue - Reset queue position to 0\n\n📌=== Bot status ===📌',
     '!stats - Get statistics for accepted trades 📊',
     '!inventory - Get my current inventory spaces 🎒',
-    '!version - Get version that the bot is running\n\n✨=== Manual review ===✨',
+    '!version - Get version that the bot is running\n\n📌=== Manual review ===📌',
     '!trades - Get a list of offers pending for manual review 🔍',
     '!trade <offerID> - Get info about a trade',
     '!accept <offerID> [Your Message] - Manually accept an active offer ✅🔍',
-    '!decline <offerID> [Your Message] - Manually decline an active offer ❌🔍\n\n✨=== Request ===✨',
+    '!decline <offerID> [Your Message] - Manually decline an active offer ❌🔍\n\n📌=== Price request ===📌',
     '!pricecheck <sku=> OR <item=> - Requests an item to be priced by PricesTF',
     '!pricecheckall - Automatically request all items in your inventory to be checked by Prices.TF.',
     '!check sku=<item sku> - Request current price for an item from Prices.TF'
