@@ -181,9 +181,8 @@ export default function sendTradeSummary(
                                     ? `\n🎒 Total items: ${`${currentItems}${slots !== undefined ? `/${slots}` : ''}`}`
                                     : '') +
                                 (AdditionalNotes
-                                    ? (isShowKeyRate || isShowPureStock || isShowInventory
-                                          ? '\n-----------------------------------------------------\n'
-                                          : '') + AdditionalNotes
+                                    ? (isShowKeyRate || isShowPureStock || isShowInventory ? '\n' : '') +
+                                      AdditionalNotes
                                     : `\n[View my backpack](https://backpack.tf/profiles/${botInfo.steamID})`)
                         }
                     ],
