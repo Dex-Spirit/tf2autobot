@@ -11,9 +11,8 @@ export default function summarize(
         `\n\n${isSteamChat ? 'Summary' : '__**Summary**__'}${
             isOfferSent !== undefined ? ` (${isOfferSent ? 'chat' : 'offer'})` : ''
         }\n` +
-        trade
-            .replace('Asked:', isSteamChat ? '• Asked:' : '**• Asked:**')
-            .replace('Offered:', isSteamChat ? '• Offered:' : '**• Offered:**') +
+            .replace('Asked:', isSteamChat ? '• Asked:' : '**📤 Asked:**')
+            .replace('Offered:', isSteamChat ? '• Offered:' : '**📥 Offered:**') +
         '\n──────────────────────' +
         (value.diff > 0
             ? `\n📈 ${isSteamChat ? 'Profit from overpay:' : '***Profit from overpay:***'} ${value.diffRef} ref` +
