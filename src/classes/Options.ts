@@ -157,7 +157,6 @@ export const DEFAULTS = {
         },
         additionalNotes: ''
     },
-    discordInviteLink: '',
     discordWebhook: {
         ownerID: '',
         displayName: '',
@@ -461,7 +460,6 @@ export interface JsonOptions {
     autokeys?: Autokeys;
     crafting?: Crafting;
     manualReview?: ManualReview;
-    discordInviteLink?: string;
     discordWebhook?: DiscordWebhook;
 }
 

@@ -81,8 +81,6 @@ export default class Commands {
             this.queueCommand(steamID);
         } else if (command === 'owner') {
             c.misc.ownerCommand(steamID, this.bot);
-        } else if (command === 'discord') {
-            c.misc.discordCommand(steamID, this.bot);
         } else if (command === 'more') {
             c.help.moreCommand(steamID, this.bot);
         } else if (command === 'autokeys') {

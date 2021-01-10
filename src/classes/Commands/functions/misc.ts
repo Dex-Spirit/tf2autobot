@@ -161,14 +161,3 @@ export function ownerCommand(steamID: SteamID, bot: Bot): void {
             `\n• Backpack.tf: https://backpack.tf/profiles/${firstAdmin.toString()}`
     );
 }
-
-export function discordCommand(steamID: SteamID, bot: Bot): void {
-    let reply = '';
-    if (bot.options.discordInviteLink) {
-        reply += `TF2Autobot Discord Server: https://discord.gg/ZrVT7mc\nOwner's Discord Server: ${bot.options.discordInviteLink}`;
-    } else {
-        reply += 'TF2Autobot Discord Server: https://discord.gg/ZrVT7mc';
-    }
-
-    bot.sendMessage(steamID, reply);
-}

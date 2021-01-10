@@ -91,9 +91,6 @@ export const optionsSchema: jsonschema.Schema = {
         manualReview: {
             $ref: 'manual-review'
         },
-        discordInviteLink: {
-            type: 'string'
-        },
         discordWebhook: {
             $ref: 'discord-webhook'
         }

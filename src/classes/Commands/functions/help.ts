@@ -15,8 +15,7 @@ const COMMANDS: string[] = [
     '!cancel - Cancel the trade offer ❌',
     '!queue - Check your position in the queue\n\n✨=== Contact Owner ===✨',
     "!owner - Get the owner's Steam profile and Backpack.tf links",
-    '!message <your message> - Send a message to the owner of the bot 💬',
-    "!discord - Get a link to join TF2Autobot and/or the owner's discord server\n\n✨=== Other Commands ===✨",
+    '!message <your message> - Send a message to the owner of the bot 💬\n\n✨=== Other Commands ===✨',
     '!more - Show the advanced commands list'
 ];
 
