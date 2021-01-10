@@ -23,8 +23,8 @@ export default function createToBuy(minKeys: number, maxKeys: number, bot: Bot):
             max: maxKeys,
             intent: 0,
             note: {
-                buy: '[𝐀𝐮𝐭𝐨𝐤𝐞𝐲𝐬] ' + opt.details.buy,
-                sell: '[𝐀𝐮𝐭𝐨𝐤𝐞𝐲𝐬] ' + opt.details.sell
+                buy: opt.details.buy.replace(/⚡️𝘧𝘢𝘴𝘵 𝘵𝘳𝘢𝘥𝘪𝘯𝘨⚡️/g, '[𝐀𝐮𝐭𝐨𝐤𝐞𝐲𝐬]'),
+                sell: opt.details.sell.replace(/⚡️𝘧𝘢𝘴𝘵 𝘵𝘳𝘢𝘥𝘪𝘯𝘨⚡️/g, '[𝐀𝐮𝐭𝐨𝐤𝐞𝐲𝐬]')
             }
         } as EntryData;
     } else if (keyPrices.src === 'manual' && !scrapAdjustment.enabled) {
@@ -44,8 +44,8 @@ export default function createToBuy(minKeys: number, maxKeys: number, bot: Bot):
             max: maxKeys,
             intent: 0,
             note: {
-                buy: '[𝐀𝐮𝐭𝐨𝐤𝐞𝐲𝐬] ' + opt.details.buy,
-                sell: '[𝐀𝐮𝐭𝐨𝐤𝐞𝐲𝐬] ' + opt.details.sell
+                buy: opt.details.buy.replace(/⚡️𝘧𝘢𝘴𝘵 𝘵𝘳𝘢𝘥𝘪𝘯𝘨⚡️/g, '[𝐀𝐮𝐭𝐨𝐤𝐞𝐲𝐬]'),
+                sell: opt.details.sell.replace(/⚡️𝘧𝘢𝘴𝘵 𝘵𝘳𝘢𝘥𝘪𝘯𝘨⚡️/g, '[𝐀𝐮𝐭𝐨𝐤𝐞𝐲𝐬]')
             }
         } as EntryData;
     } else if (scrapAdjustment.enabled) {
@@ -65,8 +65,8 @@ export default function createToBuy(minKeys: number, maxKeys: number, bot: Bot):
             max: maxKeys,
             intent: 0,
             note: {
-                buy: '[𝐀𝐮𝐭𝐨𝐤𝐞𝐲𝐬] ' + opt.details.buy,
-                sell: '[𝐀𝐮𝐭𝐨𝐤𝐞𝐲𝐬] ' + opt.details.sell
+                buy: opt.details.buy.replace(/⚡️𝘧𝘢𝘴𝘵 𝘵𝘳𝘢𝘥𝘪𝘯𝘨⚡️/g, '[𝐀𝐮𝐭𝐨𝐤𝐞𝐲𝐬]'),
+                sell: opt.details.sell.replace(/⚡️𝘧𝘢𝘴𝘵 𝘵𝘳𝘢𝘥𝘪𝘯𝘨⚡️/g, '[𝐀𝐮𝐭𝐨𝐤𝐞𝐲𝐬]')
             }
         } as EntryData;
     }
