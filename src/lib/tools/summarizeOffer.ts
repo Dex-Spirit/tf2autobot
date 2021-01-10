@@ -11,6 +11,7 @@ export default function summarize(
         `\n\n${isSteamChat ? 'Summary' : '__**Summary**__'}${
             isOfferSent !== undefined ? ` (${isOfferSent ? 'chat' : 'offer'})` : ''
         }\n` +
+        trade
             .replace('Asked:', isSteamChat ? '• Asked:' : '**📤 Asked:**')
             .replace('Offered:', isSteamChat ? '• Offered:' : '**📥 Offered:**') +
         '\n──────────────────────' +
