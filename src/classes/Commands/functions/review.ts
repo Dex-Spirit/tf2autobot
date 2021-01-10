@@ -250,10 +250,7 @@ export function accepttradeCommand(steamID: SteamID, message: string, bot: Bot):
                 }
                 // Send message to recipient if includes some messages
                 if (reply) {
-                    bot.sendMessage(
-                        partnerId,
-                        `/quote 💬 Message from ${adminDetails ? adminDetails.player_name : 'admin'}: ${reply}`
-                    );
+                    bot.sendMessage(partnerId, `/quote 💬 Message from the owner: ${reply}`);
                 }
             });
         } else {
@@ -348,10 +345,7 @@ export function declinetradeCommand(steamID: SteamID, message: string, bot: Bot)
             }
             // Send message to recipient if includes some messages
             if (reply) {
-                bot.sendMessage(
-                    partnerId,
-                    `/quote 💬 Message from ${adminDetails ? adminDetails.player_name : 'admin'}: ${reply}`
-                );
+                bot.sendMessage(partnerId, `/quote 💬 Message from the owner: ${reply}`);
             }
         });
     });
