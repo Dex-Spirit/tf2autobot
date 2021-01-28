@@ -32,7 +32,7 @@ export default function sendOfferReview(
                 reasons.includes('🟪_DUPE_CHECK_FAILED')
             );
     }
-    const mentionOwner = noMentionOnInvalidValue ? `${offer.id}` : `<@!${opt.ownerID}>, check this! - ${offer.id}`;
+    const mentionOwner = noMentionOnInvalidValue ? `${offer.id}` : `${offer.id}`;
 
     const botInfo = bot.handler.getBotInfo;
     const pureStock = pure.stock(bot);

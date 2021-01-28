@@ -24,8 +24,8 @@ export function summarizeToChat(
         `\n\n${isSteamChat ? 'Summary' : '__**Summary**__'}${
             isOfferSent !== undefined ? ` (${isOfferSent ? 'chat' : 'offer'})` : ''
         }\n` +
-        `${isSteamChat ? '• Asked:' : '**• Asked:**'} ${generatedSummary.asked}` +
-        `\n${isSteamChat ? '• Offered:' : '**• Offered:**'} ${generatedSummary.offered}` +
+        `${isSteamChat ? '• Asked:' : '**📤 Asked:**'} ${generatedSummary.asked}` +
+        `\n${isSteamChat ? '• Offered:' : '**📤 Offered:**'} ${generatedSummary.offered}` +
         '\n──────────────────────' +
         (['summary-accepted', 'review-admin'].includes(type)
             ? value.diff > 0

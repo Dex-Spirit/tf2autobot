@@ -774,7 +774,6 @@ export const DEFAULTS = {
          */
         additionalNotes: ''
     },
-
     discordWebhook: {
         // 23
         /**
