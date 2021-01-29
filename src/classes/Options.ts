@@ -2698,7 +2698,6 @@ export default interface Options extends JsonOptions {
     pricestfAPIToken?: string;
 
     skipBPTFTradeofferURL?: boolean;
-    skipAccountLimitations?: boolean;
     skipUpdateProfileSettings?: boolean;
 
     timezone?: string;
@@ -2823,7 +2822,6 @@ export function loadOptions(options?: Options): Options {
         pricestfAPIToken: getOption('pricestfAPIToken', '', String, incomingOptions),
 
         skipBPTFTradeofferURL: getOption('skipBPTFTradeofferURL', true, jsonParseBoolean, incomingOptions),
-        skipAccountLimitations: getOption('skipAccountLimitations', true, jsonParseBoolean, incomingOptions),
         skipUpdateProfileSettings: getOption('skipUpdateProfileSettings', true, jsonParseBoolean, incomingOptions),
 
         timezone: getOption('timezone', '', String, incomingOptions),

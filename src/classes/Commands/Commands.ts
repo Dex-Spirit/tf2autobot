@@ -50,6 +50,12 @@ export default class Commands {
         const command = CommandParser.getCommand(message.toLowerCase());
         const isAdmin = this.bot.isAdmin(steamID);
 
+        const checkMessage = message.split(' ').filter(word => word.includes(`!${command}`)).length;
+
+        if (checkMessage > 1) {
+            return this.bot.sendMessage(steamID, "⛔ Don't spam");
+        }
+
         const ignoreWords: { [type: string]: string[] } = {
             startsWith: [
                 'I',
@@ -788,7 +794,7 @@ export default class Commands {
             );
         const cartAmount = cart.getOurCount(params.sku);
         const ourAmount = this.bot.inventoryManager.getInventory.getAmount(params.sku, true);
-        const amountCanTrade = ourAmount - cart.getOurCount(params.sku) - cartAmount;
+        const amountCanTrade = ourAmount - cartAmount;
         const name = this.bot.schema.getName(SKU.fromString(params.sku), false);
 
         // Correct trade if needed

@@ -69,6 +69,10 @@ export default class BotManager {
         return this.schemaManager.schema;
     }
 
+    set setAPIKeyForSchema(apiKey: string) {
+        this.schemaManager.setAPIKey(apiKey);
+    }
+
     get getSocketManager(): SocketManager {
         return this.socketManager;
     }
