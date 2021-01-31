@@ -3,7 +3,6 @@ import { EconItem } from 'steam-tradeoffer-manager';
 import SchemaManager, { Paints } from 'tf2-schema-2';
 import SKU from 'tf2-sku-2';
 import url from 'url';
-// import log from '../../../lib/logger';
 import { fixItem } from '../../items';
 
 let isCrate = false;
@@ -13,7 +12,8 @@ export = function (
     normalizeFestivizedItems: boolean,
     normalizeStrangeAsSecondQuality: boolean,
     normalizePainted: boolean,
-    paints: Paints
+    paints: Paints,
+    paintsInOptions: string[]
 ): string {
     const self = this as EconItem;
 
@@ -34,7 +34,7 @@ export = function (
             paintkit: getPaintKit(self, schema),
             quality2: getElevatedQuality(self, schema, normalizeStrangeAsSecondQuality),
             crateseries: getCrateSeries(self),
-            paint: getPainted(self, normalizePainted, paints)
+            paint: getPainted(self, normalizePainted, paints, paintsInOptions)
         },
         getOutput(self, schema)
     );
@@ -42,10 +42,6 @@ export = function (
     if (item.target === null) {
         item.target = getTarget(self, schema);
     }
-
-    // log.debug(`Before fix - ${SKU.fromObject(item).toString()}: `, {
-    //     item: item
-    // });
 
     // Add missing properties, except if crates
     if (!isCrate) {
@@ -55,10 +51,6 @@ export = function (
     if (item === null) {
         throw new Error('Unknown sku for item "' + self.market_hash_name + '"');
     }
-
-    // log.debug(`After fix - ${SKU.fromObject(item).toString()}: `, {
-    //     item: item
-    // });
 
     return SKU.fromObject(item);
 };
@@ -485,24 +477,27 @@ function getCrateSeries(item: EconItem): number | null {
     }
 }
 
-function getPainted(item: EconItem, normalizePainted: boolean, paints: Paints): number | null {
+function getPainted(
+    item: EconItem,
+    normalizePainted: boolean,
+    paints: Paints,
+    paintsInOptions: string[]
+): number | null {
     if (normalizePainted) {
         return null;
     }
 
     const descriptions = item.descriptions;
-    let foundPaint = false;
 
     for (let i = 0; i < descriptions.length; i++) {
         if (descriptions[i].value.startsWith('Paint Color: ') && descriptions[i].color === '756b5e') {
-            foundPaint = true;
-
             const name = descriptions[i].value.replace('Paint Color: ', '').trim();
-            return +paints[name].replace('p', '');
+
+            if (paintsInOptions.includes(name.toLowerCase())) {
+                return +paints[name].replace('p', '');
+            }
         }
     }
 
-    if (!foundPaint) {
-        return null;
-    }
+    return null;
 }
