@@ -37,8 +37,9 @@ export default function updateListings(
             ['5021;6', '5000;6', '5001;6', '5002;6'].includes(sku)
         );
 
-        // Request priceheck on each sku involved in the trade, except craft weapons,
-        // and pure.
+        /**
+         * Request priceheck on each sku involved in the trade, except craft weapons (if weaponsAsCurrency enabled) and pure.
+         */
         if (isNotPureOrWeapons) {
             void requestCheck(sku, 'bptf').asCallback((err, body: RequestCheckResponse) => {
                 if (err) {
@@ -188,7 +189,9 @@ export default function updateListings(
                 'I have received a high-valued items which is not in my pricelist.' + '\n\nItem information:\n\n- ';
 
             for (let i = 0; i < highValue.theirItems.length; i++) {
-                if (highValue.theirItems[i].includes(name)) msg += highValue.theirItems[i];
+                if (highValue.theirItems[i].includes(name)) {
+                    msg += `${highValue.isDisableSKU[i]}: ` + highValue.theirItems[i];
+                }
             }
 
             if (opt.sendAlert.enable && opt.sendAlert.highValue.receivedNotInPricelist) {

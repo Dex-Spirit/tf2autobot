@@ -18,7 +18,7 @@ export function miscCommand(steamID: SteamID, bot: Bot, command: Misc): void {
 
     const custom = opt.customReply.reply;
     if (command === 'time') {
-        const timeWithEmojis = timeNow(bot);
+        const timeWithEmojis = timeNow(bot.options);
         bot.sendMessage(
             steamID,
             custom
@@ -235,4 +235,8 @@ function getWeaponsStock(bot: Bot, type: string[]) {
         }
     }
     return stock;
+}
+
+export function paintsCommand(steamID: SteamID, bot: Bot): void {
+    bot.sendMessage(steamID, '/code ' + JSON.stringify(bot.paints, null, 4));
 }

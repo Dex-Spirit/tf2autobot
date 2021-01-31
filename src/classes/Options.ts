@@ -815,9 +815,13 @@ export const DEFAULTS = {
              */
             url: '',
             /**
-             * If set to true, your bot only mention you for 🟥_INVALID_VALUE offers.
+             * If set to false, your bot NOT mention you for ONLY 🟥_INVALID_VALUE offers.
              */
             mentionInvalidValue: true,
+            /**
+             * If set to false, you will never be mentioned on any offer to be reviewed.
+             */
+            isMention: true,
             misc: {
                 /**
                  * Show the trade partner's quick links to their Steam profile, backpack.tf, and SteamREP pages.
@@ -843,6 +847,10 @@ export const DEFAULTS = {
              * it will send to your Steam Chat.
              */
             enable: true,
+            /**
+             * If set to false, you will never be mentioned.
+             */
+            isMention: true,
             /**
              * Discord Webhook URL.
              */
@@ -872,6 +880,10 @@ export const DEFAULTS = {
              * notify you through Discord (sendAlert.enable must be true).
              */
             enable: true,
+            /**
+             * If set to false, you will never be mentioned on any important alerts.
+             */
+            isMention: true,
             /**
              * The Discord Webhook URL you'd for the alert to be sent to.
              */
@@ -1540,7 +1552,7 @@ export const DEFAULTS = {
             'Bruised Purple Footprints': 'BP-FP 🍷',
             'Headless Horseshoes': 'HH 🍇',
             Exorcism: '👻',
-            'Pumpkin Bomb': '🎃💣',
+            'Pumpkin Bombs': '🎃💣',
             'Halloween Fire': '🔥🟢'
         },
         /**
@@ -1836,39 +1848,39 @@ export const DEFAULTS = {
     }
 };
 
-export interface OnlyEnable {
+interface OnlyEnable {
     enable?: boolean;
 }
 
 // ------------ SortType ------------
 
-export interface SortInventory extends OnlyEnable {
+interface SortInventory extends OnlyEnable {
     type?: number;
 }
 
 // ------------ WeaponsAsCurrency ------------
 
-export interface WeaponsAsCurrency extends OnlyEnable {
+interface WeaponsAsCurrency extends OnlyEnable {
     withUncraft?: boolean;
 }
 
 // ------------ CheckUses ------------
 
-export interface CheckUses {
+interface CheckUses {
     duel?: boolean;
     noiseMaker?: boolean;
 }
 
 // ------------ Game ------------
 
-export interface Game {
+interface Game {
     playOnlyTF2?: boolean;
     customName?: string;
 }
 
 // --------- Misc Settings ----------
 
-export interface MiscSettings {
+interface MiscSettings {
     showOnlyMetal?: OnlyEnable;
     sortInventory?: SortInventory;
     createListings?: OnlyEnable;
@@ -1883,7 +1895,7 @@ export interface MiscSettings {
 
 // ------------ SendAlert ------------
 
-export interface SendAlert extends OnlyEnable {
+interface SendAlert extends OnlyEnable {
     autokeys?: AutokeysAlert;
     backpackFull?: boolean;
     highValue?: HighValueAlert;
@@ -1891,14 +1903,14 @@ export interface SendAlert extends OnlyEnable {
     autoAddPaintedItems?: boolean;
 }
 
-export interface AutokeysAlert {
+interface AutokeysAlert {
     lowPure?: boolean;
     failedToAdd?: boolean;
     failedToUpdate?: boolean;
     failedToDisable?: boolean;
 }
 
-export interface HighValueAlert {
+interface HighValueAlert {
     gotDisabled?: boolean;
     receivedNotInPricelist?: boolean;
     tryingToTake?: boolean;
@@ -1906,33 +1918,33 @@ export interface HighValueAlert {
 
 // ------------ Pricelist ------------
 
-export interface Pricelist {
+interface Pricelist {
     autoRemoveIntentSell?: OnlyEnable;
     autoAddInvalidItems?: OnlyEnable;
     autoAddPaintedItems?: OnlyEnable;
     priceAge?: PriceAge;
 }
 
-export interface PriceAge {
+interface PriceAge {
     maxInSeconds?: number;
 }
 
 // ------------ Bypass ------------
 
-export interface Bypass {
+interface Bypass {
     escrow?: OnlyAllow;
     overpay?: OnlyAllow;
     giftWithoutMessage?: OnlyAllow;
     bannedPeople?: OnlyAllow;
 }
 
-export interface OnlyAllow {
+interface OnlyAllow {
     allow?: boolean;
 }
 
 // ------------ TradeSummary ------------
 
-export interface TradeSummary {
+interface TradeSummary {
     showStockChanges?: boolean;
     showTimeTakenInMS?: boolean;
     showItemPrices?: boolean;
@@ -1940,7 +1952,7 @@ export interface TradeSummary {
 
 // ------------ HighValue ------------
 
-export interface HighValue {
+interface HighValue {
     enableHold?: boolean;
     sheens?: string[];
     killstreakers?: string[];
@@ -1950,27 +1962,27 @@ export interface HighValue {
 
 // ------------ Normalize ------------
 
-export interface Normalize {
+interface Normalize {
     festivized?: NormalizeOurOrTheir;
     strangeAsSecondQuality?: NormalizeOurOrTheir;
     painted?: NormalizeOurOrTheir;
 }
 
-export interface NormalizeOurOrTheir {
+interface NormalizeOurOrTheir {
     our?: boolean;
     their?: boolean;
 }
 
 // ------------ Details ------------
 
-export interface Details {
+interface Details {
     buy?: string;
     sell?: string;
     highValue?: ShowHighValue;
     uses?: UsesDetails;
 }
 
-export interface ShowHighValue {
+interface ShowHighValue {
     showSpells: boolean;
     showStrangeParts: boolean;
     showKillstreaker: boolean;
@@ -1978,14 +1990,14 @@ export interface ShowHighValue {
     showPainted: boolean;
 }
 
-export interface UsesDetails {
+interface UsesDetails {
     duel?: string;
     noiseMaker?: string;
 }
 
 // ------------ Statistics ------------
 
-export interface Statistics {
+interface Statistics {
     lastTotalTrades?: number;
     startingTimeInUnix?: number;
     lastTotalProfitMadeInRef?: number;
@@ -1994,13 +2006,13 @@ export interface Statistics {
     sendStats?: SendStats;
 }
 
-export interface SendStats extends OnlyEnable {
+interface SendStats extends OnlyEnable {
     time?: string[];
 }
 
 // ------------ Autokeys ------------
 
-export interface Autokeys {
+interface Autokeys {
     enable?: boolean;
     minKeys?: number;
     maxKeys?: number;
@@ -2011,27 +2023,27 @@ export interface Autokeys {
     accept?: Accept;
 }
 
-export interface Banking {
+interface Banking {
     enable?: boolean;
 }
 
-export interface ScrapAdjustment {
+interface ScrapAdjustment {
     enable?: boolean;
     value?: number;
 }
 
-export interface Accept {
+interface Accept {
     understock?: boolean;
 }
 
 // ------------ Crafting ------------
 
-export interface Crafting {
+interface Crafting {
     weapons?: OnlyEnable;
     metals?: Metals;
 }
 
-export interface Metals extends OnlyEnable {
+interface Metals extends OnlyEnable {
     minScrap?: number;
     minRec?: number;
     threshold?: number;
@@ -2039,7 +2051,7 @@ export interface Metals extends OnlyEnable {
 
 // ------------ Offer Received ------------
 
-export interface OfferReceived {
+interface OfferReceived {
     invalidValue?: InvalidValue;
     invalidItems?: InvalidItems;
     disabledItems?: AutoAcceptOverpayAndAutoDecline;
@@ -2050,42 +2062,42 @@ export interface OfferReceived {
     bannedCheckFailed?: EscrowBannedCheckFailed;
 }
 
-export interface DeclineReply extends OnlyEnable {
+interface DeclineReply extends OnlyEnable {
     declineReply?: string;
 }
 
-export interface InvalidValue {
+interface InvalidValue {
     autoDecline: DeclineReply;
     exceptionValue: ExceptionValue;
 }
 
-export interface ExceptionValue {
+interface ExceptionValue {
     skus: string[];
     valueInRef: number;
 }
 
-export interface AutoAcceptOverpayAndAutoDecline {
+interface AutoAcceptOverpayAndAutoDecline {
     autoAcceptOverpay?: boolean;
     autoDecline?: DeclineReply;
 }
 
-export interface InvalidItems extends AutoAcceptOverpayAndAutoDecline {
+interface InvalidItems extends AutoAcceptOverpayAndAutoDecline {
     givePrice?: boolean;
 }
 
-export interface Duped {
+interface Duped {
     enableCheck?: boolean;
     minKeys?: number;
     autoDecline?: DeclineReply;
 }
 
-export interface EscrowBannedCheckFailed {
+interface EscrowBannedCheckFailed {
     ignoreFailed?: boolean;
 }
 
 // ------------ Manual Review ------------
 
-export interface ManualReview extends OnlyEnable {
+interface ManualReview extends OnlyEnable {
     showOfferSummary?: boolean;
     showReviewOfferNote?: boolean;
     showOwnerCurrentTime?: boolean;
@@ -2104,7 +2116,7 @@ export interface ManualReview extends OnlyEnable {
 
 // ------------ Discord Webhook ------------
 
-export interface DiscordWebhook {
+interface DiscordWebhook {
     ownerID?: string;
     displayName?: string;
     avatarURL?: string;
@@ -2114,60 +2126,67 @@ export interface DiscordWebhook {
     messages?: MessagesDW;
     priceUpdate?: PriceUpdateDW;
     sendAlert?: SendAlertStatsDW;
-    sendStats?: SendAlertStatsDW;
+    sendStats?: SendStatsDW;
 }
 
-export interface TradeSummaryDW extends OnlyEnable {
+interface TradeSummaryDW extends OnlyEnable {
     url?: string[];
     misc?: MiscTradeSummary;
     mentionOwner?: MentionOwner;
 }
 
-export interface OnlyNote {
+interface OnlyNote {
     note?: string;
 }
 
-export interface MiscTradeSummary extends OnlyNote {
+interface MiscTradeSummary extends OnlyNote {
     showQuickLinks?: boolean;
     showKeyRate?: boolean;
     showPureStock?: boolean;
     showInventory?: boolean;
 }
 
-export interface MentionOwner extends OnlyEnable {
+interface MentionOwner extends OnlyEnable {
     itemSkus?: string[];
     tradeValueInRef?: number;
 }
 
-export interface OfferReviewDW extends OnlyEnable {
+interface OfferReviewDW extends OnlyEnable {
     url?: string;
     mentionInvalidValue?: boolean;
+    isMention?: boolean;
     misc?: MiscOfferReview;
 }
 
-export interface MiscOfferReview {
+interface MiscOfferReview {
     showQuickLinks?: boolean;
     showKeyRate?: boolean;
     showPureStock?: boolean;
     showInventory?: boolean;
 }
 
-export interface MessagesDW extends OnlyEnable {
+interface MessagesDW extends OnlyEnable {
     url?: string;
+    isMention?: boolean;
     showQuickLinks?: boolean;
 }
 
-export interface PriceUpdateDW extends OnlyEnable, OnlyNote {
+interface PriceUpdateDW extends OnlyEnable, OnlyNote {
     url?: string;
 }
 
-export interface SendAlertStatsDW extends OnlyEnable {
+interface SendAlertStatsDW extends OnlyEnable {
+    isMention?: boolean;
+    url?: string;
+}
+
+interface SendStatsDW extends OnlyEnable {
     url?: string;
 }
 
 // ------------ Custom Message ------------
 
-export interface CustomMessage {
+interface CustomMessage {
     sendOffer?: string;
     welcome?: string;
     iDontKnowWhatYouMean?: string;
@@ -2180,7 +2199,7 @@ export interface CustomMessage {
     clearFriends?: string;
 }
 
-export interface DeclineNote {
+interface DeclineNote {
     general?: string;
     giftNoNote?: string;
     crimeAttempt?: string;
@@ -2198,12 +2217,12 @@ export interface DeclineNote {
 
 // ------------ Commands ------------
 
-export interface OnlyCustomReplyWithDisabled {
+interface OnlyCustomReplyWithDisabled {
     disabled?: string;
     reply?: string;
 }
 
-export interface Commands extends OnlyEnable {
+interface Commands extends OnlyEnable {
     customDisableReply?: string;
     how2trade?: How2Trade;
     price?: Price;
@@ -2231,45 +2250,45 @@ export interface Commands extends OnlyEnable {
     uncraftweapon?: Weapons;
 }
 
-export interface SpecificOperation extends OnlyEnable {
+interface SpecificOperation extends OnlyEnable {
     disableForSKU?: string[];
     customReply?: CustomReplyForSpecificOperation;
 }
 
-export interface CustomReplyForSpecificOperation {
+interface CustomReplyForSpecificOperation {
     disabled?: string;
     disabledForSKU?: string;
 }
 
-export interface How2Trade {
+interface How2Trade {
     customReply?: Omit<OnlyCustomReplyWithDisabled, 'disabled'>;
 }
 
-export interface Price extends OnlyEnable {
+interface Price extends OnlyEnable {
     customReply?: Omit<OnlyCustomReplyWithDisabled, 'reply'>;
 }
 
-export interface Cart extends OnlyEnable {
+interface Cart extends OnlyEnable {
     customReply?: CartCustom;
 }
 
-export interface CartCustom extends Omit<OnlyCustomReplyWithDisabled, 'reply'> {
+interface CartCustom extends Omit<OnlyCustomReplyWithDisabled, 'reply'> {
     title?: string;
 }
 
-export interface ClearCart {
+interface ClearCart {
     customReply?: Omit<OnlyCustomReplyWithDisabled, 'disabled'>;
 }
 
-export interface Checkout {
+interface Checkout {
     customReply?: CheckoutReply;
 }
 
-export interface CheckoutReply {
+interface CheckoutReply {
     empty?: string;
 }
 
-export interface AddToQueue {
+interface AddToQueue {
     alreadyHaveActiveOffer?: string;
     alreadyInQueueProcessingOffer?: string;
     alreadyInQueueWaitingTurn?: string;
@@ -2279,17 +2298,17 @@ export interface AddToQueue {
     hasBeenMadeAcceptingMobileConfirmation?: CartQueueProcessing;
 }
 
-export interface CartQueueProcessing {
+interface CartQueueProcessing {
     donation?: string;
     isBuyingPremium?: string;
     offer?: string;
 }
 
-export interface Cancel {
+interface Cancel {
     customReply?: CancelCustom;
 }
 
-export interface CancelCustom {
+interface CancelCustom {
     isBeingSent?: string;
     isCancelling?: string;
     isRemovedFromQueue?: string;
@@ -2297,17 +2316,17 @@ export interface CancelCustom {
     successCancel?: string;
 }
 
-export interface Queue {
+interface Queue {
     customReply?: QueueCustom;
 }
 
-export interface QueueCustom {
+interface QueueCustom {
     notInQueue?: string;
     offerBeingMade?: string;
     hasPosition?: string;
 }
 
-export interface Owner extends OnlyEnable {
+interface Owner extends OnlyEnable {
     customReply?: OnlyCustomReplyWithDisabled;
 }
 
@@ -2316,38 +2335,38 @@ export interface Discord extends OnlyEnable {
     inviteURL?: string;
 }
 
-export interface More extends OnlyEnable {
+interface More extends OnlyEnable {
     customReply?: Omit<OnlyCustomReplyWithDisabled, 'reply'>;
 }
 
-export interface AutokeysCommand extends OnlyEnable {
+interface AutokeysCommand extends OnlyEnable {
     customReply?: Omit<OnlyCustomReplyWithDisabled, 'reply'>;
 }
 
-export interface Message extends OnlyEnable {
+interface Message extends OnlyEnable {
     customReply?: MessageCustom;
 }
 
-export interface MessageCustom {
+interface MessageCustom {
     disabled?: string;
     wrongSyntax?: string;
     fromOwner?: string;
     success?: string;
 }
 
-export interface Time extends OnlyEnable {
+interface Time extends OnlyEnable {
     customReply?: OnlyCustomReplyWithDisabled;
 }
 
-export interface Uptime extends OnlyEnable {
+interface Uptime extends OnlyEnable {
     customReply?: OnlyCustomReplyWithDisabled;
 }
 
-export interface Pure extends OnlyEnable {
+interface Pure extends OnlyEnable {
     customReply?: OnlyCustomReplyWithDisabled;
 }
 
-export interface Rate extends OnlyEnable {
+interface Rate extends OnlyEnable {
     customReply?: OnlyCustomReplyWithDisabled;
 }
 
@@ -2356,11 +2375,11 @@ export interface Stock extends OnlyEnable {
     maximumItems?: number;
 }
 
-export interface Weapons extends OnlyEnable {
+interface Weapons extends OnlyEnable {
     customReply?: HaveOrNo;
 }
 
-export interface HaveOrNo {
+interface HaveOrNo {
     disabled?: string;
     dontHave?: string;
     have?: string;
@@ -2368,7 +2387,7 @@ export interface HaveOrNo {
 
 // ------------ Extra Details -----------
 
-export interface DetailsExtra {
+interface DetailsExtra {
     spells?: Spells;
     sheens?: Sheens;
     killstreakers?: Killstreakers;
@@ -2376,7 +2395,7 @@ export interface DetailsExtra {
     strangeParts?: StrangeParts;
 }
 
-export interface Spells {
+interface Spells {
     'Putrescent Pigmentation'?: string;
     'Die Job'?: string;
     'Chromatic Corruption'?: string;
@@ -2391,11 +2410,11 @@ export interface Spells {
     'Bruised Purple Footprints'?: string;
     'Headless Horseshoes'?: string;
     Exorcism?: string;
-    'Pumpkin Bomb'?: string;
+    'Pumpkin Bombs'?: string;
     'Halloween Fire'?: string;
 }
 
-export interface Sheens {
+interface Sheens {
     'Team Shine'?: string;
     'Hot Rod'?: string;
     Manndarin?: string;
@@ -2405,7 +2424,7 @@ export interface Sheens {
     'Villainous Violet'?: string;
 }
 
-export interface Killstreakers {
+interface Killstreakers {
     'Cerebral Discharge'?: string;
     'Fire Horns'?: string;
     Flames?: string;
@@ -2415,12 +2434,12 @@ export interface Killstreakers {
     Tornado?: string;
 }
 
-export interface PaintedProperties {
+interface PaintedProperties {
     stringNote?: string;
     price?: Currency;
 }
 
-export interface Painted {
+interface Painted {
     'A Color Similar to Slate'?: PaintedProperties;
     'A Deep Commitment to Purple'?: PaintedProperties;
     'A Distinctive Lack of Hue'?: PaintedProperties;
@@ -2483,7 +2502,7 @@ export type PaintedNames =
     | 'The Value of Teamwork'
     | 'Waterlogged Lab Coat';
 
-export interface StrangeParts {
+interface StrangeParts {
     'Robots Destroyed'?: string;
     Kills?: string;
     'Airborne Enemy Kills'?: string;

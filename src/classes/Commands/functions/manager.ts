@@ -290,7 +290,12 @@ export function blockUnblockCommand(steamID: SteamID, message: string, bot: Bot,
 export function clearFriendsCommand(steamID: SteamID, bot: Bot): void {
     const friendsToRemove = bot.friends.getFriends.filter(steamid => !bot.handler.friendsToKeep.includes(steamid));
 
+    const promiseDelay = (ms: number) => {
+        return new Promise(resolve => setTimeout(() => resolve(), ms));
+    };
+
     friendsToRemove.forEach(steamid => {
+        void promiseDelay(1000);
         bot.sendMessage(
             steamid,
             `/quote Hey ${
@@ -519,12 +524,12 @@ function generateAutokeysReply(steamID: SteamID, bot: Bot): string {
             : 'Not active'
     }`;
     /*
-    //        X
-    // Keys ————|—————————|————▶
-    //                       X
-    // Refs ————|—————————|————▶
-    //         min       max
-    */
+     *        X
+     * Keys ————|—————————|————▶
+     *                       X
+     * Refs ————|—————————|————▶
+     *         min       max
+     */
 
     return reply;
 }
@@ -561,6 +566,10 @@ export function refreshListingsCommand(steamID: SteamID, bot: Bot): void {
                 if (bot.options.normalize.strangeAsSecondQuality.our && listingSKU.includes(';strange')) {
                     listingSKU = listingSKU.replace(';strange', '');
                 }
+            } else {
+                if (/;[p][0-9]+/.test(listingSKU)) {
+                    listingSKU = listingSKU.replace(/;[p][0-9]+/, '');
+                }
             }
 
             listingsSKUs.push(listingSKU);
@@ -574,10 +583,22 @@ export function refreshListingsCommand(steamID: SteamID, bot: Bot): void {
             }
         });
 
-        const pricelist = bot.pricelist.getPrices.filter(
-            entry => entry.enabled && !newlistingsSKUs.includes(entry.sku)
+        const inventory = bot.inventoryManager;
+        const pricelist = bot.pricelist.getPrices.filter(entry => {
             // Filter our pricelist to only the items that are missing.
-        );
+            const amountCanBuy = inventory.amountCanTrade(entry.sku, true);
+            const amountCanSell = inventory.amountCanTrade(entry.sku, false);
+
+            if (
+                ([0, 2].includes(entry.intent) && amountCanBuy <= 0) ||
+                ([1, 2].includes(entry.intent) && amountCanSell <= 0)
+            ) {
+                // Ignore items we can't buy or sell
+                return false;
+            }
+
+            return entry.enabled && !newlistingsSKUs.includes(entry.sku);
+        });
 
         if (pricelist.length > 0) {
             log.debug('Checking listings for ' + pluralize('item', pricelist.length, true) + '...');

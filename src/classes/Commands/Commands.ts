@@ -35,11 +35,11 @@ export default class Commands {
         this.bot = bot;
     }
 
-    get cartQueue(): CartQueue {
+    private get cartQueue(): CartQueue {
         return this.bot.handler.cartQueue;
     }
 
-    get weaponsAsCurrency(): { enable: boolean; withUncraft: boolean } {
+    private get weaponsAsCurrency(): { enable: boolean; withUncraft: boolean } {
         return {
             enable: this.bot.options.miscSettings.weaponsAsCurrency.enable,
             withUncraft: this.bot.options.miscSettings.weaponsAsCurrency.withUncraft
@@ -135,6 +135,8 @@ export default class Commands {
             this.queueCommand(steamID);
         } else if (['time', 'uptime', 'pure', 'rate', 'owner', 'discord', 'stock'].includes(command)) {
             c.misc.miscCommand(steamID, this.bot, command as Misc);
+        } else if (command === 'paints' && isAdmin) {
+            c.misc.paintsCommand(steamID, this.bot);
         } else if (command === 'more') {
             c.help.moreCommand(steamID, this.bot);
         } else if (command === 'autokeys') {
@@ -216,12 +218,8 @@ export default class Commands {
         } else if (command === 'premium' && isAdmin) {
             this.buyBPTFPremiumCommand(steamID, message);
         } else if (
-            ignoreWords.startsWith.some(word => {
-                return message.startsWith(word);
-            }) ||
-            ignoreWords.endsWith.some(word => {
-                return message.endsWith(word);
-            })
+            ignoreWords.startsWith.some(word => message.startsWith(word)) ||
+            ignoreWords.endsWith.some(word => message.endsWith(word))
         ) {
             return;
         } else {
@@ -294,8 +292,9 @@ export default class Commands {
                 }
 
                 reply += `${pluralize(match.name, amount)} for ${currencies.toString()}`;
-                //
-            } else reply += ` and selling for ${currencies.toString()}`;
+            } else {
+                reply += ` and selling for ${currencies.toString()}`;
+            }
         }
 
         reply += `.\n📦 I have ${this.bot.inventoryManager.getInventory.getAmount(match.sku, true)}`;
