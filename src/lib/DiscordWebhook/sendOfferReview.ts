@@ -34,7 +34,7 @@ export default function sendOfferReview(
     }
     const mentionOwner = noMentionOnInvalidValue
         ? `${offer.id}`
-        : `${opt.offerReview.isMention ? `<@!${opt.ownerID}>, ` : ''}check this! - ${offer.id}`;
+        : `${opt.offerReview.isMention ? `<@!${opt.ownerID}>, check this! - ` : ''}${offer.id}`;
 
     const botInfo = bot.handler.getBotInfo;
     const pureStock = pure.stock(bot);
