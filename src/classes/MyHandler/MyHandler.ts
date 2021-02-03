@@ -1862,11 +1862,10 @@ export default class MyHandler extends Handler {
                         this.bot.options.customMessage.welcome
                             ? this.bot.options.customMessage.welcome
                                   .replace(/%name%/g, '')
-                                  .replace(/%admin%/g, isAdmin ? '!help' : '!how2trade') +
-                                  ` - TF2Autobot v${process.env.BOT_VERSION}`
+                                  .replace(/%admin%/g, isAdmin ? '!help' : '!how2trade')
                             : `Hi! If you don't know how things work, please type "!` +
                                   (isAdmin ? 'help' : 'how2trade') +
-                                  `" - TF2Autobot v${process.env.BOT_VERSION}`
+                                  `"`
                     );
                 }
 
@@ -1885,11 +1884,10 @@ export default class MyHandler extends Handler {
                 this.bot.options.customMessage.welcome
                     ? this.bot.options.customMessage.welcome
                           .replace(/%name%/g, friend.player_name)
-                          .replace(/%admin%/g, isAdmin ? '!help' : '!how2trade') +
-                          ` - TF2Autobot v${process.env.BOT_VERSION}`
+                          .replace(/%admin%/g, isAdmin ? '!help' : '!how2trade')
                     : `Hi ${friend.player_name}! If you don't know how things work, please type "!` +
                           (isAdmin ? 'help' : 'how2trade') +
-                          `" - TF2Autobot v${process.env.BOT_VERSION}`
+                          `"`
             );
         });
     }
