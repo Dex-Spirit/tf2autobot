@@ -99,14 +99,23 @@ function getSummary(
         const name = replace.itemName(generateName ? generateName : 'unknown');
 
         if (showStockChanges) {
+            let oldStock = 0;
             const currentStock = bot.inventoryManager.getInventory.getAmount(sku, true);
             const maxStock = bot.pricelist.getPrice(sku, false);
 
+            if (type === 'summary-accepted') {
+                oldStock = which === 'our' ? currentStock + amount : currentStock - amount;
+            } else {
+                oldStock = currentStock;
+            }
+
             if (withLink) {
                 summary.push(
-                    `[${name}](https://www.prices.tf/items/${sku})${amount > 1 ? ` x${amount}` : ''} (${currentStock}${
-                        maxStock ? `/${maxStock.max}` : ''
-                    })`
+                    `[${name}](https://www.prices.tf/items/${sku})${amount > 1 ? ` x${amount}` : ''} ${
+                        maxStock 
+                            ? `(${currentStock}/${maxStock})` 
+                            : `${type === 'summary-accepted' && oldStock !== null ? `(${oldStock} → ${currentStock})` : ''}`
+                    }`
                 );
             } else {
                 summary.push(
