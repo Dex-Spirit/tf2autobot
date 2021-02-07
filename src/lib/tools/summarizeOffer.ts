@@ -113,7 +113,7 @@ function getSummary(
                 summary.push(
                     `[${name}](https://www.prices.tf/items/${sku})${amount > 1 ? ` x${amount}` : ''} ${
                         maxStock
-                            ? `(${currentStock}/${maxStock})`
+                            ? `(${currentStock}/${maxStock.max})`
                             : `${
                                   type === 'summary-accepted' && oldStock !== null
                                       ? `(${oldStock} → ${currentStock})`
