@@ -112,9 +112,13 @@ function getSummary(
             if (withLink) {
                 summary.push(
                     `[${name}](https://www.prices.tf/items/${sku})${amount > 1 ? ` x${amount}` : ''} ${
-                        maxStock 
-                            ? `(${currentStock}/${maxStock})` 
-                            : `${type === 'summary-accepted' && oldStock !== null ? `(${oldStock} → ${currentStock})` : ''}`
+                        maxStock
+                            ? `(${currentStock}/${maxStock})`
+                            : `${
+                                  type === 'summary-accepted' && oldStock !== null
+                                      ? `(${oldStock} → ${currentStock})`
+                                      : ''
+                              }`
                     }`
                 );
             } else {
