@@ -138,6 +138,7 @@ function getSummary(
         const amount = typeof dict[sku] === 'object' ? (dict[sku]['amount'] as number) : dict[sku];
         const generateName = bot.schema.getName(SKU.fromString(sku.replace(/;p\d+/, '')), false);
         const name = replace.itemName(generateName ? generateName : 'unknown');
+        const pureSku = ['5021;6', '5002;6', '5001;6', '5000;6']
 
         if (showStockChanges) {
             let oldStock = 0;
@@ -164,7 +165,7 @@ function getSummary(
                                 ? '<:tf2scrap:809644301067091968>'
                                 : name
                             : name
-                    }](https://www.prices.tf/items/${sku})${amount > 1 ? ` x${amount}` : ''} ${
+                    }](https://www.prices.tf/items/${sku})${amount > 1 || bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku) ? ` x${amount}` : ''} ${
                         maxStock
                             ? `(${currentStock}/${maxStock.max})`
                             : `${
@@ -198,7 +199,7 @@ function getSummary(
                                 ? '<:tf2scrap:809644301067091968>'
                                 : name
                             : name
-                    }](https://www.prices.tf/items/${sku})${amount > 1 ? ` x${amount}` : ''}`
+                    }](https://www.prices.tf/items/${sku})${amount > 1 || bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku) ? ` x${amount}` : ''}`
                 );
             } else {
                 summary.push(name + (amount > 1 ? ` x${amount}` : ''));
