@@ -156,13 +156,13 @@ function getSummary(
                     `[${
                         bot.options.tradeSummary.showPureInEmoji
                             ? sku === '5021;6'
-                                ? '<:tf2key:742725387968184371>'
+                                ? '<:tf2key:813050393793658930>'
                                 : sku === '5002;6'
-                                ? '<:tf2refined:735533220942053396>'
+                                ? '<:tf2refined:813050808605212672>'
                                 : sku === '5001;6'
-                                ? '<:tf2reclaimed:809644301633323048>'
+                                ? '<:tf2reclaimed:813048057352421417>'
                                 : sku === '5000;6'
-                                ? '<:tf2scrap:809644301067091968>'
+                                ? '<:tf2scrap:813048057577996348>'
                                 : name
                             : name
                     }](https://www.prices.tf/items/${sku})${amount > 1 || bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku) ? ` x${amount}` : ''} ${
@@ -178,7 +178,7 @@ function getSummary(
             } else {
                 summary.push(
                     `${name}${amount > 1 ? ` x${amount}` : ''}${
-                        type === 'review-partner' || type === 'declined'
+                        ['review-partner', 'declined'].includes(type)
                             ? ''
                             : ` (${currentStock}${maxStock ? `/${maxStock.max}` : ''})`
                     }`
@@ -190,13 +190,13 @@ function getSummary(
                     `[${
                         bot.options.tradeSummary.showPureInEmoji
                             ? sku === '5021;6'
-                                ? '<:tf2key:742725387968184371>'
+                                ? '<:tf2key:813050393793658930>'
                                 : sku === '5002;6'
-                                ? '<:tf2refined:735533220942053396>'
+                                ? '<:tf2refined:813050808605212672>'
                                 : sku === '5001;6'
-                                ? '<:tf2reclaimed:809644301633323048>'
+                                ? '<:tf2reclaimed:813048057352421417>'
                                 : sku === '5000;6'
-                                ? '<:tf2scrap:809644301067091968>'
+                                ? '<:tf2scrap:813048057577996348>'
                                 : name
                             : name
                     }](https://www.prices.tf/items/${sku})${amount > 1 || bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku) ? ` x${amount}` : ''}`
