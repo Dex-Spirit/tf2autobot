@@ -22,8 +22,6 @@ type NameAvatar = 'name' | 'avatar';
 type BlockUnblock = 'block' | 'unblock';
 
 export default class ManagerCommands {
-    private readonly bot: Bot;
-
     private pricelistCount = 0;
 
     private executed = false;
@@ -32,7 +30,7 @@ export default class ManagerCommands {
 
     private executeTimeout: NodeJS.Timeout;
 
-    constructor(bot: Bot) {
+    constructor(private readonly bot: Bot) {
         this.bot = bot;
     }
 
@@ -540,16 +538,12 @@ export default class ManagerCommands {
                 });
 
                 // Remove duplicate elements
-                const newlistingsSKUs: string[] = [];
-                listingsSKUs.forEach(sku => {
-                    if (!newlistingsSKUs.includes(sku)) {
-                        newlistingsSKUs.push(sku);
-                    }
-                });
+                const newlistingsSKUs = new Set(listingsSKUs);
+                const uniqueSKUs = [...newlistingsSKUs];
 
                 const pricelist = this.bot.pricelist.getPrices.filter(entry => {
                     // First find out if lising for this item from bptf already exist.
-                    const isExist = newlistingsSKUs.find(sku => entry.sku === sku);
+                    const isExist = uniqueSKUs.find(sku => entry.sku === sku);
 
                     if (!isExist) {
                         // undefined - listing does not exist but item is in the pricelist
