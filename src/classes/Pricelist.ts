@@ -8,7 +8,7 @@ import Options from './Options';
 import Bot from './Bot';
 import log from '../lib/logger';
 import validator from '../lib/validator';
-import { sendWebHookPriceUpdateV1, sendAlert } from '../lib/DiscordWebhook/export';
+import { sendWebHookPriceUpdateV1, sendAlert, sendFailedPriceUpdate } from '../lib/DiscordWebhook/export';
 import SocketManager from './MyHandler/SocketManager';
 import Pricer, { GetItemPriceResponse, Item } from './Pricer';
 
@@ -302,7 +302,8 @@ export default class Pricelist extends EventEmitter {
     private async validateEntry(entry: Entry, src: PricelistChangedSource): Promise<void> {
         const keyPrices = this.getKeyPrices;
 
-        if (entry.autoprice) {
+        if (entry.autoprice && entry.group !== 'isPartialPriced') {
+            // skip this part if autoprice is true and group is "isPartialPriced"
             try {
                 const price = await this.priceSource.getPrice(entry.sku, 'bptf');
 
@@ -506,9 +507,8 @@ export default class Pricelist extends EventEmitter {
 
     getIndex(sku: string, parsedSku?: SchemaManager.Item): number {
         // Get name of item
-        const name = this.schema.getName(parsedSku ? parsedSku : SKU.fromString(sku), false);
-        const findIndex = this.prices.findIndex(entry => entry.name === name);
-        return findIndex;
+        //const name = this.schema.getName(parsedSku ? parsedSku : SKU.fromString(sku), false);
+        return this.prices.findIndex(entry => entry.sku === (sku ? sku : SKU.fromObject(parsedSku)));
     }
 
     /** returns index of sku's generic match otherwise returns -1 */
@@ -762,11 +762,9 @@ export default class Pricelist extends EventEmitter {
                     continue;
                 }
 
-                const isInStock = inventory.getAmount(currPrice.sku, true) > 0;
-
-                const item = SKU.fromString(currPrice.sku);
-                // PricesTF (and custom pricer) includes "The" in the name, we need to use proper name
-                const name = this.schema.getName(item, true);
+                const sku = currPrice.sku;
+                const isInStock = inventory.getAmount(sku, true) > 0;
+                const item = SKU.fromString(sku);
 
                 // Go through pricestf/custom pricer prices
                 const grouped = groupedPrices[item.quality][item.killstreak];
@@ -775,7 +773,7 @@ export default class Pricelist extends EventEmitter {
                 for (let j = 0; j < groupedCount; j++) {
                     const newestPrice = grouped[j];
 
-                    if (name === newestPrice.name) {
+                    if (sku === newestPrice.sku) {
                         // Found matching items
                         if (currPrice.time < newestPrice.time) {
                             // Times don't match, update our price
@@ -790,7 +788,7 @@ export default class Pricelist extends EventEmitter {
                             const currSellingValue = currPrice.sell.toValue(keyPrice);
 
                             const isNotExceedThreshold = newestPrice.time - currPrice.time < opt.thresholdInSeconds;
-                            const isNotExcluded = !excludedSKU.includes(currPrice.sku);
+                            const isNotExcluded = !excludedSKU.includes(sku);
 
                             if (opt.enable && isInStock && isNotExceedThreshold && isNotExcluded) {
                                 // if optPartialUpdate.enable is true and the item is currently in stock
@@ -868,11 +866,28 @@ export default class Pricelist extends EventEmitter {
 
         const match = this.getPrice(data.sku);
         const opt = this.options;
+        const dw = opt.discordWebhook.sendAlert;
+        const isDwEnabled = dw.enable && dw.url !== '';
 
-        const newPrices = {
-            buy: new Currencies(data.buy),
-            sell: new Currencies(data.sell)
-        };
+        let newPrices: BuyAndSell;
+
+        try {
+            newPrices = {
+                buy: new Currencies(data.buy),
+                sell: new Currencies(data.sell)
+            };
+        } catch (err) {
+            log.error(`Fail to update ${data.sku}`, {
+                error: err as Error,
+                rawData: data
+            });
+
+            if (isDwEnabled) {
+                sendFailedPriceUpdate(data, err, this.isUseCustomPricer, this.options);
+            }
+
+            return;
+        }
 
         if (data.sku === '5021;6' && this.globalKeyPrices !== undefined) {
             /**New received prices data.*/
@@ -979,8 +994,6 @@ export default class Pricelist extends EventEmitter {
                     if (isUpdate) {
                         match.group = 'isPartialPriced';
                         pricesChanged = true;
-                        const dw = opt.discordWebhook.sendAlert;
-                        const isDwEnabled = dw.enable && dw.url !== '';
 
                         const msg =
                             `${
@@ -1043,6 +1056,7 @@ export default class Pricelist extends EventEmitter {
 
                             sendWebHookPriceUpdateV1(
                                 data.sku,
+                                data.name,
                                 match,
                                 time,
                                 this.schema,
@@ -1105,6 +1119,11 @@ export interface KeyPrices {
     sell: Currencies;
     src: string;
     time: number;
+}
+
+interface BuyAndSell {
+    buy: Currencies;
+    sell: Currencies;
 }
 
 export class ParsedPrice {
