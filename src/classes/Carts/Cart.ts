@@ -334,7 +334,9 @@ export default abstract class Cart {
 
         this.offer.data('handleTimestamp', dayjs().valueOf());
 
-        this.offer.setMessage(opt.customMessage.sendOffer || 'Powered by TF2Autobot');
+        this.offer.setMessage(
+            (opt.customMessage.sendOffer ? opt.customMessage.sendOffer + ' | ' : '') + 'Powered by TF2Autobot'
+        );
 
         if (this.notify === true) {
             this.offer.data('notify', true);
