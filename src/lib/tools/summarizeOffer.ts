@@ -180,7 +180,13 @@ function getSummary(
 
             if (summaryAccepted || summaryInProcess) {
                 oldStock =
-                    which === 'our' ? currentStock + amount : summaryInProcess ? currentStock : currentStock - amount;
+                    which === 'our'
+                        ? summaryInProcess
+                            ? currentStock
+                            : currentStock + amount
+                        : summaryInProcess
+                        ? currentStock
+                        : currentStock - amount;
             } else {
                 oldStock = currentStock;
             }
@@ -208,10 +214,14 @@ function getSummary(
                                       : `${
                                             (summaryAccepted || summaryInProcess) && oldStock !== null
                                                 ? `(${oldStock} → ${
-                                                      summaryInProcess && which !== 'our'
-                                                          ? currentStock + amount
-                                                          : currentStock
-                                                  })`
+                                                    which === 'our'
+                                                        ? summaryInProcess
+                                                            ? currentStock - amount
+                                                            : currentStock
+                                                        : summaryInProcess
+                                                        ? currentStock + amount
+                                                        : currentStock
+                                                    })`
                                                 : ''
                                         }`
                               }`
@@ -230,10 +240,14 @@ function getSummary(
                                       : `${
                                             (summaryAccepted || summaryInProcess) && oldStock !== null
                                                 ? `(${oldStock} → ${
-                                                      summaryInProcess && which !== 'our'
-                                                          ? currentStock + amount
-                                                          : currentStock
-                                                  })`
+                                                    which === 'our'
+                                                        ? summaryInProcess
+                                                            ? currentStock - amount
+                                                            : currentStock
+                                                        : summaryInProcess
+                                                        ? currentStock + amount
+                                                        : currentStock
+                                                    })`
                                                 : ''
                                         }`
                               }`
