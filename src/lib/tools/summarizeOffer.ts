@@ -168,7 +168,7 @@ function getSummary(
         const amount = typeof dict[sku] === 'object' ? (dict[sku]['amount'] as number) : dict[sku];
         const generateName = bot.schema.getName(SKU.fromString(sku.replace(/;p\d+/, '')), properName);
         const name = properName ? generateName : replace.itemName(generateName ? generateName : 'unknown');
-        const pureSku = ['5021;6', '5002;6', '5001;6', '5000;6']
+        const pureSku = ['5021;6', '5002;6', '5001;6', '5000;6'];
 
         if (showStockChanges) {
             let oldStock: number | null = 0;
@@ -193,13 +193,27 @@ function getSummary(
                                 ? pureEmoji.get(sku)
                                 : name
                             : name
-                    }](https://www.prices.tf/items/${sku})${amount > 1 || bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku) ? ` x${amount}` : ''} ${
-                        maxStock
-                            ? `(${summaryInProcess && which !== 'our' ? currentStock + amount : currentStock}/${maxStock.max})`
+                    }](https://www.prices.tf/items/${sku})${
+                        amount > 1 || (bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku))
+                            ? ` x${amount}`
+                            : ''
+                    } ${
+                        pureSku.includes(sku)
+                            ? ''
                             : `${
-                                (summaryAccepted || summaryInProcess) && oldStock !== null
-                                      ? `(${oldStock} → ${summaryInProcess && which !== 'our' ? currentStock + amount : currentStock})`
-                                      : ''
+                                  maxStock
+                                      ? `(${
+                                            summaryInProcess && which !== 'our' ? currentStock + amount : currentStock
+                                        }/${maxStock.max})`
+                                      : `${
+                                            (summaryAccepted || summaryInProcess) && oldStock !== null
+                                                ? `(${oldStock} → ${
+                                                      summaryInProcess && which !== 'our'
+                                                          ? currentStock + amount
+                                                          : currentStock
+                                                  })`
+                                                : ''
+                                        }`
                               }`
                     }`
                 );
@@ -208,9 +222,21 @@ function getSummary(
                     `${name}${amount > 1 ? ` x${amount}` : ''}${
                         ['review-partner', 'declined'].includes(type)
                             ? ''
-                            : ` (${(summaryAccepted || summaryInProcess) && oldStock !== null ? `${oldStock} → ` : ''}${
-                                  summaryInProcess && which !== 'our' ? currentStock + amount : currentStock
-                              }${maxStock ? `/${maxStock.max}` : ''})`
+                            : ` ${
+                                  maxStock
+                                      ? `(${
+                                            summaryInProcess && which !== 'our' ? currentStock + amount : currentStock
+                                        }/${maxStock.max})`
+                                      : `${
+                                            (summaryAccepted || summaryInProcess) && oldStock !== null
+                                                ? `(${oldStock} → ${
+                                                      summaryInProcess && which !== 'our'
+                                                          ? currentStock + amount
+                                                          : currentStock
+                                                  })`
+                                                : ''
+                                        }`
+                              }`
                     }`
                 );
             }
@@ -223,7 +249,11 @@ function getSummary(
                                 ? pureEmoji.get(sku)
                                 : name
                             : name
-                    }](https://www.prices.tf/items/${sku})${amount > 1 || bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku) ? ` x${amount}` : ''}`
+                    }](https://www.prices.tf/items/${sku})${
+                        amount > 1 || (bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku))
+                            ? ` x${amount}`
+                            : ''
+                    }`
                 );
             } else {
                 summary.push(name + (amount > 1 ? ` x${amount}` : ''));
