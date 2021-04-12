@@ -65,7 +65,9 @@ export const DEFAULTS = {
         partialPrice: {
             onUpdate: true,
             onSuccessUpdatePartialPriced: true,
-            onFailedUpdatePartialPriced: true
+            onFailedUpdatePartialPriced: true,
+            onBulkUpdatePartialPriced: true,
+            onResetAfterThreshold: true
         },
         receivedUnusualNotInPricelist: true,
         failedToUpdateOldPrices: true
@@ -115,6 +117,7 @@ export const DEFAULTS = {
     tradeSummary: {
         showStockChanges: false,
         showTimeTakenInMS: false,
+        showDetailedTimeTaken: true,
         showItemPrices: true,
         showPureInEmoji: false,
         showProperName: false,
@@ -1039,9 +1042,11 @@ interface SendAlert extends OnlyEnable {
 }
 
 interface PartialPrice {
-    onUpdate: boolean;
-    onSuccessUpdatePartialPriced: boolean;
-    onFailedUpdatePartialPriced: boolean;
+    onUpdate?: boolean;
+    onSuccessUpdatePartialPriced?: boolean;
+    onFailedUpdatePartialPriced?: boolean;
+    onBulkUpdatePartialPriced?: boolean;
+    onResetAfterThreshold?: boolean;
 }
 
 interface AutokeysAlert {
@@ -1093,9 +1098,10 @@ interface OnlyAllow {
 
 // ------------ TradeSummary ------------
 
-interface TradeSummary {
+export interface TradeSummary {
     showStockChanges?: boolean;
     showTimeTakenInMS?: boolean;
+    showDetailedTimeTaken?: boolean;
     showItemPrices?: boolean;
     showPureInEmoji?: boolean;
     showProperName?: boolean;

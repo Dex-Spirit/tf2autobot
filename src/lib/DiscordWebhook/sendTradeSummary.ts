@@ -6,12 +6,14 @@ import { Webhook } from './interfaces';
 import log from '../logger';
 import * as t from '../tools/export';
 import Bot from '../../classes/Bot';
+import { sendToAdmin } from '../../classes/MyHandler/offer/accepted/processAccepted';
 
 export default async function sendTradeSummary(
     offer: TradeOffer,
     accepted: Accepted,
     bot: Bot,
-    processTime: number,
+    timeTakenToComplete: number,
+    timeTakenToProcessOrConstruct: number,
     isTradingKeys: boolean,
     isOfferSent: boolean | undefined
 ): Promise<void> {
@@ -104,7 +106,8 @@ export default async function sendTradeSummary(
     const autokeys = bot.handler.autokeys;
     const status = autokeys.getOverallStatus;
 
-    const cT = bot.options.tradeSummary.customText;
+    const tSum = optBot.tradeSummary;
+    const cT = tSum.customText;
     const cTTimeTaken = cT.timeTaken.discordWebhook ? cT.timeTaken.discordWebhook : '⏱ **Time taken:**';
     const cTKeyRate = cT.keyRate.discordWebhook ? cT.keyRate.discordWebhook : '🔑 Key rate:';
     const cTPureStock = cT.pureStock.discordWebhook ? cT.pureStock.discordWebhook : '💰 Pure stock:';
@@ -126,7 +129,13 @@ export default async function sendTradeSummary(
                 },
                 description:
                     summary +
-                    `\n${cTTimeTaken} ${t.convertTime(processTime, optBot.tradeSummary.showTimeTakenInMS)}\n\n` +
+                    `\n${cTTimeTaken} ${t.convertTime(
+                        timeTakenToComplete,
+                        timeTakenToProcessOrConstruct,
+                        isOfferSent,
+                        tSum.showDetailedTimeTaken,
+                        tSum.showTimeTakenInMS
+                    )}\n\n` +
                     (misc.showQuickLinks ? `${quickLinks(t.replace.specialChar(details.personaName), links)}\n` : '\n'),
                 fields: [
                     {
@@ -216,14 +225,35 @@ export default async function sendTradeSummary(
     url.forEach((link, i) => {
         sendWebhook(link, acceptedTradeSummary, 'trade-summary', i)
             .then(() => log.debug(`✅ Sent summary (#${offer.id}) to Discord ${url.length > 1 ? `(${i + 1})` : ''}`))
-            .catch(err =>
+            .catch(err => {
                 log.debug(
                     `❌ Failed to send trade-summary webhook (#${offer.id}) to Discord ${
                         url.length > 1 ? `(${i + 1})` : ''
                     }: `,
                     err
-                )
-            );
+                );
+
+                sendToAdmin(
+                    bot,
+                    offer,
+                    optBot.steamChat.customInitializer.acceptedTradeSummary,
+                    value,
+                    itemList,
+                    keyPrices,
+                    isOfferSent,
+                    isCustomPricer,
+                    cTKeyRate,
+                    autokeys,
+                    status,
+                    slots,
+                    cTPureStock,
+                    cTTotalItems,
+                    cTTimeTaken,
+                    timeTakenToComplete,
+                    timeTakenToProcessOrConstruct,
+                    tSum
+                );
+            });
     });
 }
 

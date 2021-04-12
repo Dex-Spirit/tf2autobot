@@ -143,7 +143,7 @@ export default abstract class Handler {
      * @param offer - The offer that changed
      * @param oldState - The old state of the offer
      */
-    onTradeOfferChanged(offer: TradeOfferManager.TradeOffer, oldState: number, processTime?: number): void {
+    onTradeOfferChanged(offer: TradeOfferManager.TradeOffer, oldState: number, timeTakenToComplete?: number): void {
         // empty function
     }
 
@@ -188,6 +188,22 @@ export default abstract class Handler {
      * @param bumped - How many listings were bumped as the result of the heartbeat
      */
     onHeartbeat(bumped: number): void {
+        // empty function
+    }
+
+    /**
+     * Called on error when creating listings
+     * @param err - Error message
+     */
+    onCreateListingsError(err: Error): void {
+        // empty function
+    }
+
+    /**
+     * Called on error when deleting listings
+     * @param err - Error message
+     */
+    onDeleteListingsError(err: Error): void {
         // empty function
     }
 }
