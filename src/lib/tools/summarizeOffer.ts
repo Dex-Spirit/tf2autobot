@@ -209,11 +209,11 @@ function getSummary(
                         amount > 1 || (bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku))
                             ? ` x${amount}`
                             : ''
-                    } (${
+                    } ${
                         bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku)
                             ? ''
                             : maxStock
-                            ? `${
+                            ? `(${
                                   which === 'our'
                                       ? summaryInProcess
                                           ? currentStock - amount
@@ -221,10 +221,10 @@ function getSummary(
                                       : summaryInProcess
                                       ? currentStock + amount
                                       : currentStock
-                              }/${maxStock.max}`
+                              }/${maxStock.max})`
                             : `${
                                   (summaryAccepted || summaryInProcess) && oldStock !== null
-                                      ? `${oldStock} → ${
+                                      ? `(${oldStock} → ${
                                             which === 'our'
                                                 ? summaryInProcess
                                                     ? currentStock - amount
@@ -232,10 +232,10 @@ function getSummary(
                                                 : summaryInProcess
                                                 ? currentStock + amount
                                                 : currentStock
-                                        }`
+                                        })`
                                       : ''
                               }`
-                    })`
+                    }`
                 );
             } else {
                 summary.push(
@@ -246,11 +246,11 @@ function getSummary(
                     }${
                         ['review-partner', 'declined'].includes(type)
                             ? ''
-                            : ` (${
+                            : ` ${
                                   bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku)
                                       ? ''
                                       : maxStock
-                                      ? `${
+                                      ? `(${
                                             which === 'our'
                                                 ? summaryInProcess
                                                     ? currentStock - amount
@@ -258,10 +258,10 @@ function getSummary(
                                                 : summaryInProcess
                                                 ? currentStock + amount
                                                 : currentStock
-                                        }/${maxStock.max}`
+                                        }/${maxStock.max})`
                                       : `${
                                             (summaryAccepted || summaryInProcess) && oldStock !== null
-                                                ? `${oldStock} → ${
+                                                ? `(${oldStock} → ${
                                                       which === 'our'
                                                           ? summaryInProcess
                                                               ? currentStock - amount
@@ -269,7 +269,7 @@ function getSummary(
                                                           : summaryInProcess
                                                           ? currentStock + amount
                                                           : currentStock
-                                                  }`
+                                                  })`
                                                 : ''
                                         }`
                               })`
