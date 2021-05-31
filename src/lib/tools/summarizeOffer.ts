@@ -174,6 +174,7 @@ function getSummary(
             ? bot.schema.getName(SKU.fromString(sku.replace(/;p\d+/, '')), properName)
             : sku; // Non-TF2 items
         const name = properName ? generateName : replace.itemName(generateName ? generateName : 'unknown');
+        const pureSku = ['5021;6', '5002;6', '5001;6', '5000;6'];
 
         if (showStockChanges) {
             let oldStock: number | null = 0;
@@ -204,24 +205,15 @@ function getSummary(
                                 ? pureEmoji.get(sku)
                                 : name
                             : name
-                    }](https://www.prices.tf/items/${sku})${amount > 1 ? ` x${amount}` : ''} (${
-                        (summaryAccepted || summaryInProcess) && oldStock !== null ? `${oldStock} → ` : ''
-                    }${
-                        which === 'our'
-                            ? summaryInProcess
-                                ? currentStock - amount
-                                : currentStock
-                            : summaryInProcess
-                            ? currentStock + amount
-                            : currentStock
-                    }${maxStock ? `/${maxStock.max}` : ''})`
-                );
-            } else {
-                summary.push(
-                    `${name}${amount > 1 ? ` x${amount}` : ''}${
-                        ['review-partner', 'declined'].includes(type)
+                    }](https://www.prices.tf/items/${sku})${
+                        amount > 1 || (bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku))
+                            ? ` x${amount}`
+                            : ''
+                    } (${
+                        bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku)
                             ? ''
-                            : ` (${(summaryAccepted || summaryInProcess) && oldStock !== null ? `${oldStock} → ` : ''}${
+                            : maxStock
+                            ? `${
                                   which === 'our'
                                       ? summaryInProcess
                                           ? currentStock - amount
@@ -229,7 +221,58 @@ function getSummary(
                                       : summaryInProcess
                                       ? currentStock + amount
                                       : currentStock
-                              }${maxStock ? `/${maxStock.max}` : ''})`
+                              }/${maxStock.max}`
+                            : `${
+                                  (summaryAccepted || summaryInProcess) && oldStock !== null
+                                      ? `${oldStock} → ${
+                                            which === 'our'
+                                                ? summaryInProcess
+                                                    ? currentStock - amount
+                                                    : currentStock
+                                                : summaryInProcess
+                                                ? currentStock + amount
+                                                : currentStock
+                                        }`
+                                      : ''
+                              }`
+                    })`
+                );
+            } else {
+                summary.push(
+                    `${name}${
+                        amount > 1 || (bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku))
+                            ? ` x${amount}`
+                            : ''
+                    }${
+                        ['review-partner', 'declined'].includes(type)
+                            ? ''
+                            : ` (${
+                                  bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku)
+                                      ? ''
+                                      : maxStock
+                                      ? `${
+                                            which === 'our'
+                                                ? summaryInProcess
+                                                    ? currentStock - amount
+                                                    : currentStock
+                                                : summaryInProcess
+                                                ? currentStock + amount
+                                                : currentStock
+                                        }/${maxStock.max}`
+                                      : `${
+                                            (summaryAccepted || summaryInProcess) && oldStock !== null
+                                                ? `${oldStock} → ${
+                                                      which === 'our'
+                                                          ? summaryInProcess
+                                                              ? currentStock - amount
+                                                              : currentStock
+                                                          : summaryInProcess
+                                                          ? currentStock + amount
+                                                          : currentStock
+                                                  }`
+                                                : ''
+                                        }`
+                              })`
                     }`
                 );
             }
