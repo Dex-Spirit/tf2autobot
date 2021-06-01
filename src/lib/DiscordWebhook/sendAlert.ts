@@ -230,7 +230,7 @@ export default function sendAlert(
                 'unusualInvalidItems'
             ].includes(type) && optDW.sendAlert.isMention
                 ? `<@!${optDW.ownerID}>`
-                : '') + (content ? ` - ${content}` : ''),
+                : '') + (content ? ` ${content}` : ''),
         embeds: [
             {
                 title: title,
