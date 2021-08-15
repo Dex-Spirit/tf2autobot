@@ -236,9 +236,11 @@ export default function sendAlert(
                 'failed-accept',
                 'error-accept',
                 'unusualInvalidItems'
-            ].includes(type) && optDW.sendAlert.isMention
-                ? `<@!${optDW.ownerID}>`
-                : '') + (content ? ` ${content}` : ''),
+            ].includes(type) &&
+            optDW.sendAlert.isMention &&
+            optDW.ownerID.length > 0
+                ? optDW.ownerID.map(id => `<@!${id}>`).join(', ')
+                : '') + (content ? ` - ${content}` : ''),
         embeds: [
             {
                 title: title,

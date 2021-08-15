@@ -37,6 +37,11 @@
         "game": {
             "playOnlyTF2": false,
             "customName": ""
+        },
+        "alwaysRemoveItemAttributes": {
+            "customTexture": {
+                "enable": true
+            }
         }
     },
     "sendAlert": {
@@ -277,6 +282,7 @@
         }
     },
     "crafting": {
+        "manual": false,
         "weapons": {
             "enable": true
         },
@@ -339,6 +345,12 @@
                 "declineReply": ""
             }
         },
+        "failedToCheckDuped": {
+            "autoDecline": {
+                "enable": false,
+                "declineReply": ""
+            }
+        },
         "escrowCheckFailed": {
             "ignoreFailed": false
         },
@@ -382,7 +394,7 @@
         "additionalNotes": ""
     },
     "discordWebhook": {
-        "ownerID": "",
+        "ownerID": [],
         "displayName": "",
         "avatarURL": "",
         "embedColor": "9171753",
@@ -470,7 +482,9 @@
             "banned": "",
             "escrow": "",
             "manual": "",
-            "failedToCounter": ""
+            "failedToCounter": "",
+            "takingItemsWithIntentBuy": "",
+            "givingItemsWithIntentSell": ""
         },
         "accepted": {
             "automatic": {
@@ -658,6 +672,7 @@
         },
         "craftweapon": {
             "enable": true,
+            "showOnlyExist": true,
             "customReply": {
                 "disabled": "",
                 "dontHave": "",
@@ -666,6 +681,7 @@
         },
         "uncraftweapon": {
             "enable": true,
+            "showOnlyExist": true,
             "customReply": {
                 "disabled": "",
                 "dontHave": "",

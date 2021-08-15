@@ -45,6 +45,14 @@ export const DEFAULTS: JsonOptions = {
         game: {
             playOnlyTF2: false,
             customName: ''
+        },
+        alwaysRemoveItemAttributes: {
+            customTexture: {
+                enable: true
+            }
+            // giftedByTag: {
+            //     enable: true
+            // }
         }
     },
 
@@ -295,6 +303,7 @@ export const DEFAULTS: JsonOptions = {
     },
 
     crafting: {
+        manual: false,
         weapons: {
             enable: true
         },
@@ -364,6 +373,13 @@ export const DEFAULTS: JsonOptions = {
                 declineReply: ''
             }
         },
+        // 🟪_DUPE_CHECK_FAILED
+        failedToCheckDuped: {
+            autoDecline: {
+                enable: false,
+                declineReply: ''
+            }
+        },
         // ⬜_ESCROW_CHECK_FAILED
         escrowCheckFailed: {
             ignoreFailed: false
@@ -420,7 +436,7 @@ export const DEFAULTS: JsonOptions = {
     },
 
     discordWebhook: {
-        ownerID: '',
+        ownerID: [],
         displayName: '',
         avatarURL: '',
         embedColor: '9171753',
@@ -509,7 +525,9 @@ export const DEFAULTS: JsonOptions = {
             banned: '',
             escrow: '',
             manual: '',
-            failedToCounter: ''
+            failedToCounter: '',
+            takingItemsWithIntentBuy: '',
+            givingItemsWithIntentSell: ''
         },
         accepted: {
             automatic: {
@@ -702,6 +720,7 @@ export const DEFAULTS: JsonOptions = {
         },
         craftweapon: {
             enable: true,
+            showOnlyExist: true,
             customReply: {
                 disabled: '',
                 dontHave: '',
@@ -710,6 +729,7 @@ export const DEFAULTS: JsonOptions = {
         },
         uncraftweapon: {
             enable: true,
+            showOnlyExist: true,
             customReply: {
                 disabled: '',
                 dontHave: '',
@@ -1090,6 +1110,12 @@ interface MiscSettings {
     weaponsAsCurrency?: WeaponsAsCurrency;
     checkUses?: CheckUses;
     game?: Game;
+    alwaysRemoveItemAttributes?: AlwaysRemoveItemAttributes;
+}
+
+interface AlwaysRemoveItemAttributes {
+    customTexture?: OnlyEnable;
+    // giftedByTag?: OnlyEnable;
 }
 
 // ------------ SendAlert ------------
@@ -1345,6 +1371,7 @@ interface Accept {
 // ------------ Crafting ------------
 
 interface Crafting {
+    manual?: boolean;
     weapons?: OnlyEnable;
     metals?: Metals;
 }
@@ -1366,6 +1393,7 @@ interface OfferReceived {
     overstocked?: AutoAcceptOverpayAndAutoDecline;
     understocked?: AutoAcceptOverpayAndAutoDecline;
     duped?: Duped;
+    failedToCheckDuped: FailedToCheckDuped;
     escrowCheckFailed?: EscrowBannedCheckFailed;
     bannedCheckFailed?: EscrowBannedCheckFailed;
 }
@@ -1399,6 +1427,10 @@ interface Duped {
     autoDecline?: DeclineReply;
 }
 
+interface FailedToCheckDuped {
+    autoDecline?: DeclineReply;
+}
+
 interface EscrowBannedCheckFailed {
     ignoreFailed?: boolean;
 }
@@ -1425,7 +1457,7 @@ interface ManualReview extends OnlyEnable {
 // ------------ Discord Webhook ------------
 
 interface DiscordWebhook {
-    ownerID?: string;
+    ownerID?: string[];
     displayName?: string;
     avatarURL?: string;
     embedColor?: string;
@@ -1533,6 +1565,8 @@ interface DeclineNote {
     escrow?: string;
     manual?: string;
     failedToCounter?: string;
+    takingItemsWithIntentBuy?: string;
+    givingItemsWithIntentSell?: string;
 }
 
 interface AcceptedNote {
@@ -1540,7 +1574,7 @@ interface AcceptedNote {
     manual?: OfferType;
 }
 
-interface OfferType {
+export interface OfferType {
     largeOffer: string;
     smallOffer: string;
 }
@@ -1708,6 +1742,7 @@ export interface Stock extends OnlyEnable {
 
 interface Weapons extends OnlyEnable {
     customReply?: HaveOrNo;
+    showOnlyExist?: boolean;
 }
 
 interface HaveOrNo {
@@ -2048,48 +2083,85 @@ function replaceOldProperties(options: Options): boolean {
 
     // <= v4.1.5 → v4.2.0
     const hv = options.highValue;
-    const spells = hv.spells;
-    if (Array.isArray(spells)) {
-        options.highValue.spells = {
-            names: spells,
-            exceptionSkus: []
-        };
-        isChanged = true;
+    if (hv) {
+        const spells = hv.spells;
+        if (Array.isArray(spells)) {
+            options.highValue.spells = {
+                names: spells,
+                exceptionSkus: []
+            };
+            isChanged = true;
+        }
+
+        const sheens = hv.sheens;
+        if (Array.isArray(sheens)) {
+            options.highValue.sheens = {
+                names: sheens,
+                exceptionSkus: []
+            };
+            isChanged = true;
+        }
+
+        const killstreakers = hv.killstreakers;
+        if (Array.isArray(killstreakers)) {
+            options.highValue.killstreakers = {
+                names: killstreakers,
+                exceptionSkus: []
+            };
+            isChanged = true;
+        }
+
+        const strangeParts = hv.strangeParts;
+        if (Array.isArray(strangeParts)) {
+            options.highValue.strangeParts = {
+                names: strangeParts,
+                exceptionSkus: []
+            };
+            isChanged = true;
+        }
+
+        const painted = hv.painted;
+        if (Array.isArray(painted)) {
+            options.highValue.painted = {
+                names: painted,
+                exceptionSkus: []
+            };
+            isChanged = true;
+        }
     }
 
-    const sheens = hv.sheens;
-    if (Array.isArray(sheens)) {
-        options.highValue.sheens = {
-            names: sheens,
-            exceptionSkus: []
-        };
-        isChanged = true;
+    // <= v4.2.0 → v4.2.1
+    if (options.discordWebhook) {
+        const ownerID = options.discordWebhook.ownerID;
+        if (!Array.isArray(ownerID)) {
+            options.discordWebhook.ownerID = ownerID === '' ? [] : [ownerID];
+            isChanged = true;
+        } else {
+            // Automatically remove first element if it's an emptry string
+            // (was accidentally added when updating from <= v4.2.0 to v4.2.4)
+            if (ownerID[0] === '') {
+                if (ownerID.length > 1) {
+                    options.discordWebhook.ownerID.shift();
+                } else {
+                    options.discordWebhook.ownerID.length = 0;
+                }
+
+                isChanged = true;
+            }
+        }
     }
 
-    const killstreakers = hv.killstreakers;
-    if (Array.isArray(killstreakers)) {
-        options.highValue.killstreakers = {
-            names: killstreakers,
-            exceptionSkus: []
-        };
-        isChanged = true;
-    }
+    // v4.4.3/v4.4.4 -> v4.4.5 - Automatically remove takingItemsWithZeroSellingPrice
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    //@ts-ignore
+    if (options.customMessage?.decline?.takingItemsWithZeroSellingPrice !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        //@ts-ignore
+        delete options.customMessage.decline.takingItemsWithZeroSellingPrice;
 
-    const strangeParts = hv.strangeParts;
-    if (Array.isArray(strangeParts)) {
-        options.highValue.strangeParts = {
-            names: strangeParts,
-            exceptionSkus: []
-        };
-        isChanged = true;
-    }
+        options.customMessage.decline['takingItemsWithIntentBuy'] = '';
+        options.customMessage.decline['givingItemsWithIntentSell'] = '';
 
-    const painted = hv.painted;
-    if (Array.isArray(painted)) {
-        options.highValue.painted = {
-            names: painted,
-            exceptionSkus: []
-        };
         isChanged = true;
     }
 

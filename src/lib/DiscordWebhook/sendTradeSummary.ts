@@ -80,8 +80,9 @@ export default async function sendTradeSummary(
     const isMentionHV = accepted.isMention;
 
     const mentionOwner =
-        IVAmount > 0 || isMentionHV // Only mention on accepted 🟨_INVALID_ITEMS or 🔶_HIGH_VALUE_ITEMS
-            ? `<@!${optDW.ownerID}> - Accepted ${
+        (IVAmount > 0 || isMentionHV) && optDW.ownerID.length > 0 // Only mention on accepted 🟨_INVALID_ITEMS or 🔶_HIGH_VALUE_ITEMS
+            ? optDW.ownerID.map(id => `<@!${id}>`).join(', ') +
+              ` - Accepted ${
                   IVAmount > 0 && isMentionHV
                       ? `INVALID_ITEMS and High value ${pluralize('item', IVAmount + HVAmount)}`
                       : IVAmount > 0 && !isMentionHV
@@ -91,8 +92,9 @@ export default async function sendTradeSummary(
                       : ''
               } trade here!`
             : optDW.tradeSummary.mentionOwner.enable &&
+              optDW.ownerID.length > 0 &&
               (isMentionOurItems || isMentionTheirItems || isMentionOnGreaterValue)
-            ? `<@!${optDW.ownerID}>`
+            ? optDW.ownerID.map(id => `<@!${id}>`).join(', ')
             : '';
 
     log.debug('getting partner Avatar and Name...');

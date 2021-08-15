@@ -5,6 +5,7 @@ import Currencies from 'tf2-currencies-2';
 import validUrl from 'valid-url';
 import sleepasync from 'sleep-async';
 import dayjs from 'dayjs';
+import { EFriendRelationship } from 'steam-user';
 import { fixSKU } from '../functions/utils';
 import Bot from '../../Bot';
 import CommandParser from '../../CommandParser';
@@ -272,6 +273,35 @@ export default class ManagerCommands {
         }
     }
 
+    blockedListCommand(steamID: SteamID): void {
+        this.bot.community.getFriendsList((err, friendlist) => {
+            if (err) {
+                return this.bot.sendMessage(steamID, `❌ Error getting friendlist: ${JSON.stringify(err)}`);
+            }
+
+            const friendIDs = Object.keys(friendlist);
+            if (friendIDs.length === 0) {
+                return this.bot.sendMessage(steamID, `❌ I don't have any friends :sadcat:`);
+            }
+
+            const blockedFriends = friendIDs.filter(friendID =>
+                [EFriendRelationship.Blocked, EFriendRelationship.Ignored, EFriendRelationship.IgnoredFriend].includes(
+                    friendlist[friendID]
+                )
+            );
+
+            if (blockedFriends.length === 0) {
+                return this.bot.sendMessage(steamID, `❌ I don't have any blocked friends.`);
+            }
+
+            this.bot.sendMessage(
+                steamID,
+                // use rep.tf for shorter link - prevent Steam rate limit :(
+                `Blocked friends:\n- ${blockedFriends.map(id => `https://rep.tf/${id}`).join('\n- ')}`
+            );
+        });
+    }
+
     blockUnblockCommand(steamID: SteamID, message: string, command: BlockUnblock): void {
         const steamid = CommandParser.removeCommand(message);
 
@@ -439,7 +469,7 @@ export default class ManagerCommands {
                 )} minutes before you run refresh listings command again.`
             );
         } else {
-            const listingsSKUs: string[] = [];
+            const listingsSKUs: { [sku: string]: { intent: number[] } } = {};
             this.bot.listingManager.getListings(async err => {
                 if (err) {
                     log.error('Unable to refresh listings: ', err);
@@ -494,30 +524,58 @@ export default class ManagerCommands {
                         listing.remove();
                     }
 
-                    listingsSKUs.push(listingSKU);
+                    if (listingsSKUs[listingSKU]) {
+                        listingsSKUs[listingSKU].intent.push(listing.intent);
+                    } else {
+                        listingsSKUs[listingSKU] = {
+                            intent: [listing.intent]
+                        };
+                    }
                 });
 
-                // Remove duplicate elements
-                const uniqueSKUs = [...new Set(listingsSKUs)];
-
                 const pricelist = Object.assign({}, this.bot.pricelist.getPrices);
+
                 for (const sku in pricelist) {
                     if (!Object.prototype.hasOwnProperty.call(pricelist, sku)) {
                         continue;
                     }
 
-                    if (uniqueSKUs.includes(sku)) {
-                        delete pricelist[sku];
+                    const entry = pricelist[sku];
+                    const listing = listingsSKUs[sku];
+
+                    const amountCanBuy = inventoryManager.amountCanTrade(sku, true);
+                    const amountAvailable = inventory.getAmount(sku, false, true);
+
+                    if (listing) {
+                        if (
+                            listing.intent.length === 1 &&
+                            listing.intent[0] === 0 && // We only check if the only listing exist is buy order
+                            entry.max > 1 &&
+                            amountAvailable > 0 &&
+                            amountAvailable > entry.min
+                        ) {
+                            // here we only check if the bot already have that item
+                            log.debug(`Missing sell order listings: ${sku}`);
+                        } else {
+                            delete pricelist[sku];
+                        }
+
                         continue;
                     }
 
-                    const amountCanBuy = inventoryManager.amountCanTrade(sku, true);
+                    // listing not exist
+
+                    if (!entry.enabled) {
+                        delete pricelist[sku];
+                        log.debug(`${sku} disabled, skipping...`);
+                        continue;
+                    }
 
                     if (
-                        (amountCanBuy > 0 && inventoryManager.isCanAffordToBuy(pricelist[sku].buy, inventory)) ||
-                        inventory.getAmount(sku, false, true) > 0
+                        (amountCanBuy > 0 && inventoryManager.isCanAffordToBuy(entry.buy, inventory)) ||
+                        amountAvailable > 0
                     ) {
-                        // if can amountCanBuy is more than 0 and isCanAffordToBuy is true OR amountCanSell is more than 0
+                        // if can amountCanBuy is more than 0 and isCanAffordToBuy is true OR amountAvailable is more than 0
                         // return this entry
                         log.debug(`Missing${isFilterCantAfford ? '/Re-adding can afford' : ' listings'}: ${sku}`);
                     } else {
@@ -525,7 +583,8 @@ export default class ManagerCommands {
                     }
                 }
 
-                const pricelistCount = Object.keys(pricelist).length;
+                const skusToCheck = Object.keys(pricelist);
+                const pricelistCount = skusToCheck.length;
 
                 if (pricelistCount > 0) {
                     clearTimeout(this.executeRefreshListTimeout);
@@ -534,7 +593,7 @@ export default class ManagerCommands {
                     log.debug(
                         'Checking listings for ' +
                             pluralize('item', pricelistCount, true) +
-                            ` [${Object.keys(pricelist).join(', ')}] ...`
+                            ` [${skusToCheck.join(', ')}] ...`
                     );
 
                     this.bot.sendMessage(
@@ -554,7 +613,7 @@ export default class ManagerCommands {
                     }, (this.pricelistCount > 4000 ? 60 : 30) * 60 * 1000);
 
                     await this.bot.listings.recursiveCheckPricelist(
-                        Object.keys(pricelist),
+                        skusToCheck,
                         pricelist,
                         true,
                         this.pricelistCount > 4000 ? 400 : 200,
