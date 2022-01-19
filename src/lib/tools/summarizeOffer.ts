@@ -214,7 +214,7 @@ function getSummary(
                                 ? pureEmoji.get(sku)
                                 : name
                             : name
-                    }](https://www.prices.tf/items/${sku})${
+                    }](https://autobot.tf/items/${sku})${
                         amount > 1 || (bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku))
                             ? ` x${amount}`
                             : ''
@@ -294,7 +294,7 @@ function getSummary(
                                 ? pureEmoji.get(sku)
                                 : name
                             : name
-                    }](https://www.prices.tf/items/${sku})${amount > 1 ? ` x${amount}` : ''}`
+                    }](https://autobot.tf/items/${sku})${amount > 1 ? ` x${amount}` : ''}`
                 );
             } else {
                 summary.push(name + (amount > 1 ? ` x${amount}` : ''));
