@@ -1,7 +1,7 @@
 import SteamID from 'steamid';
 import SteamUser, { EResult } from 'steam-user';
 import TradeOfferManager, { CustomError } from '@tf2autobot/tradeoffer-manager';
-import SteamCommunity from 'steamcommunity';
+import SteamCommunity from '@tf2autobot/steamcommunity';
 import SteamTotp from 'steam-totp';
 import ListingManager from '@tf2autobot/bptf-listings';
 import SchemaManager, { Effect, Paints, StrangeParts } from '@tf2autobot/tf2-schema';
@@ -506,11 +506,33 @@ export default class Bot {
                         this.listingManager = new ListingManager({
                             token: this.options.bptfAccessToken,
                             userID,
-                            userAgent: 'TF2Autobot@' + process.env.BOT_VERSION,
+                            userAgent:
+                                'TF2Autobot' +
+                                (this.options.useragentHeaderCustom !== ''
+                                    ? ` - ${this.options.useragentHeaderCustom}`
+                                    : ' - Run your own bot for free'),
                             schema: this.schema
                         });
 
                         this.addListener(this.listingManager, 'pulse', this.handler.onUserAgent.bind(this), true);
+                        this.addListener(
+                            this.listingManager,
+                            'createListingsSuccessful',
+                            this.handler.onCreateListingsSuccessful.bind(this),
+                            true
+                        );
+                        this.addListener(
+                            this.listingManager,
+                            'updateListingsSuccessful',
+                            this.handler.onUpdateListingsSuccessful.bind(this),
+                            true
+                        );
+                        this.addListener(
+                            this.listingManager,
+                            'deleteListingsSuccessful',
+                            this.handler.onDeleteListingsSuccessful.bind(this),
+                            true
+                        );
                         this.addListener(
                             this.listingManager,
                             'createListingsError',

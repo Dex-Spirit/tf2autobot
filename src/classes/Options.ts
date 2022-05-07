@@ -500,7 +500,10 @@ export const DEFAULTS: JsonOptions = {
         sendAlert: {
             enable: true,
             isMention: true,
-            url: ''
+            url: {
+                main: '',
+                partialPriceUpdate: ''
+            }
         },
         sendStats: {
             enable: false,
@@ -1542,7 +1545,10 @@ interface PriceUpdateDW extends OnlyEnable, OnlyNote {
 
 interface SendAlertStatsDW extends OnlyEnable {
     isMention?: boolean;
-    url?: string;
+    url?: {
+        main: string;
+        partialPriceUpdate: string;
+    };
 }
 
 interface SendStatsDW extends OnlyEnable {
@@ -1974,6 +1980,8 @@ export default interface Options extends JsonOptions {
     bptfAccessToken?: string;
     bptfAPIKey?: string;
 
+    useragentHeaderCustom?: string;
+
     admins?: string[];
     keep?: string[];
     itemStatsWhitelist?: string[];
@@ -2193,6 +2201,17 @@ function replaceOldProperties(options: Options): boolean {
         isChanged = true;
     }
 
+    // v4.8.0 -> v4.9.0 - Automatically make room to separate different discord urls for sendAlert
+    if (typeof options.discordWebhook?.sendAlert?.url === 'string') {
+        const mainUrl = options.discordWebhook.sendAlert.url;
+        options.discordWebhook.sendAlert.url = {
+            main: mainUrl,
+            partialPriceUpdate: ''
+        };
+
+        isChanged = true;
+    }
+
     return isChanged;
 }
 
@@ -2213,6 +2232,8 @@ export function loadOptions(options?: Options): Options {
 
         bptfAccessToken: getOption('bptfAccessToken', '', String, incomingOptions),
         bptfAPIKey: getOption('bptfAPIKey', '', String, incomingOptions),
+
+        useragentHeaderCustom: getOption('useragentHeaderCustom', '', String, incomingOptions),
 
         admins: getOption('admins', [], jsonParseArray, incomingOptions),
         keep: getOption('keep', [], jsonParseArray, incomingOptions),
