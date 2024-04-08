@@ -38,9 +38,9 @@ export default function sendOfferReview(
             ? `${offer.id}`
             : `${
                   opt.offerReview.isMention && opt.ownerID.length > 0
-                      ? opt.ownerID.map(id => `<@!${id}>`).join(', ') + `, `
+                      ? opt.ownerID.map(id => `<@!${id}>`).join(', ') + `, check this! - `
                       : ''
-              }check this! - ${offer.id}`;
+              }${offer.id}`;
 
     const botInfo = bot.handler.getBotInfo;
     const pureStock = pure.stock(bot);
