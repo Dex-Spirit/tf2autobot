@@ -2216,6 +2216,11 @@ export default interface Options extends JsonOptions {
 
     enableHttpApi?: boolean;
     httpApiPort?: number;
+
+    IPC?: boolean;
+    tls?: boolean;
+    tlsHost?: string;
+    tlsPort?: number;
 }
 
 export interface adminData {
@@ -2528,7 +2533,12 @@ export function loadOptions(options?: Options): Options {
         enableSaveLogFile: getOption('enableSaveLogFile', true, jsonParseBoolean, incomingOptions),
 
         enableHttpApi: getOption('enableHttpApi', false, jsonParseBoolean, incomingOptions),
-        httpApiPort: getOption('httpApiPort', 3001, jsonParseNumber, incomingOptions)
+        httpApiPort: getOption('httpApiPort', 3001, jsonParseNumber, incomingOptions),
+
+        tls: getOption('tls', false, jsonParseBoolean, incomingOptions),
+        tlsHost: getOption('tlsHost', 'localhost', String, incomingOptions),
+        tlsPort: getOption('tlsPort', 8000, jsonParseNumber, incomingOptions),
+        IPC: getOption('IPC', false, jsonParseBoolean, incomingOptions)
     };
 
     if (!envOptions.steamAccountName) {

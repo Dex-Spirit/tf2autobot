@@ -42,6 +42,7 @@ import Options from './Options';
 import IPricer from './IPricer';
 import { EventEmitter } from 'events';
 import { Blocked } from './MyHandler/interfaces';
+import ipcHandler from './IPC';
 import filterAxiosError from '@tf2autobot/filter-axios-error';
 import Helper, { axiosAbortSignal } from '../lib/helpers';
 
@@ -52,6 +53,8 @@ export interface SteamTokens {
 
 export default class Bot {
     // Modules and classes
+    readonly ipc?: ipcHandler;
+
     schema: SchemaManager.Schema;
 
     readonly bptf: BptfLogin;
@@ -200,6 +203,7 @@ export default class Bot {
         this.tf2gc = new TF2GC(this);
 
         this.handler = new MyHandler(this, this.priceSource);
+        if (this.options.IPC) this.ipc = new ipcHandler(this);
 
         this.admins = [];
 
@@ -897,6 +901,7 @@ export default class Bot {
                         this.login(await this.getRefreshToken())
                             .then(() => {
                                 log.info('Signed in to Steam!');
+                                if (this.options.IPC) this.ipc.init();
 
                                 /* eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call */
                                 return callback(null);
@@ -1018,6 +1023,10 @@ export default class Bot {
                             void this.halt();
                         }
                         this.setProperties();
+                        if (this.options.IPC) {
+                            this.ipc.sendPricelist();
+                            this.addListener(this.pricelist, 'pricelist', this.ipc.sendPricelist.bind(this.ipc), false); //TODO adapt
+                        }
                         async.parallel(
                             [
                                 (callback): void => {
