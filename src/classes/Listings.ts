@@ -743,7 +743,7 @@ export default class Listings {
                 .replace(/%keyPrice%/g, '')
                 .replace(/%uses%/g, '');
             if (entry.sku === '5021;6' && this.bot.handler.autokeys.isEnabled && opt.details.showAutokeys) {
-                details = '[𝐀𝐮𝐭𝐨𝐤𝐞𝐲𝐬] ' + details;
+                details.replace(/⚡️𝘧𝘢𝘴𝘵 𝘵𝘳𝘢𝘥𝘪𝘯𝘨⚡️/g, '[𝐀𝐮𝐭𝐨𝐤𝐞𝐲𝐬]');
             }
             //
         } else {
