@@ -503,6 +503,18 @@ export const optionsSchema: jsonschema.Schema = {
                         }
                     },
                     additionalProperties: false
+                },
+                ecp: {
+                    type: 'object',
+                    properties: {
+                        useBoldChars: {
+                            type: 'boolean'
+                        },
+                        useWordSwap: {
+                            type: 'boolean'
+                        }
+                    },
+                    additionalProperties: false
                 }
             },
             required: [
