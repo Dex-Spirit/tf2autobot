@@ -45,6 +45,7 @@ import { Blocked } from './MyHandler/interfaces';
 import filterAxiosError from '@tf2autobot/filter-axios-error';
 import { axiosAbortSignal } from '../lib/helpers';
 import { apiRequest } from '../lib/apiRequest';
+import EasyCopyPaste from 'easycopypaste';
 
 export interface SteamTokens {
     refreshToken: string;
@@ -172,6 +173,8 @@ export default class Bot {
 
     public periodicCheckAdmin: NodeJS.Timeout;
 
+    readonly ecp: EasyCopyPaste;
+
     constructor(public readonly botManager: BotManager, public options: Options, readonly priceSource: IPricer) {
         this.botManager = botManager;
 
@@ -189,11 +192,22 @@ export default class Bot {
             assetCacheMaxItems: 50
         });
 
+        // ECP --START--
+        this.ecp = new EasyCopyPaste();
+        const ecpSettings = options.miscSettings.ecp;
+
+        if (ecpSettings) {
+            this.ecp.useBoldChars = ecpSettings.useBoldChars ?? false;
+            this.ecp.useWordSwap = ecpSettings.useWordSwap ?? true;
+        }
+        // ECP --END--
+
         this.bptf = new BptfLogin();
         this.tf2 = new TF2(this.client);
         this.friends = new Friends(this);
         this.groups = new Groups(this);
         this.trades = new Trades(this);
+
         this.listings = new Listings(this);
         this.tf2gc = new TF2GC(this);
 
