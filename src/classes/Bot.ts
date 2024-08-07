@@ -11,7 +11,7 @@ import TF2 from '@tf2autobot/tf2';
 import dayjs, { Dayjs } from 'dayjs';
 import async from 'async';
 import semver from 'semver';
-import axios, { AxiosError } from 'axios';
+import { AxiosError } from 'axios';
 import pluralize from 'pluralize';
 import * as timersPromises from 'timers/promises';
 import fs from 'fs';
@@ -44,6 +44,7 @@ import { EventEmitter } from 'events';
 import { Blocked } from './MyHandler/interfaces';
 import filterAxiosError from '@tf2autobot/filter-axios-error';
 import { axiosAbortSignal } from '../lib/helpers';
+import { apiRequest } from '../lib/apiRequest';
 
 export interface SteamTokens {
     refreshToken: string;
@@ -179,7 +180,7 @@ export default class Bot {
         this.manager = new TradeOfferManager({
             steam: this.client,
             community: this.community,
-            // useAccessToken: false, // https://github.com/DoctorMcKay/node-steam-tradeoffer-manager/wiki/Access-Tokens
+            useAccessToken: !this.options.steamApiKey, // https://github.com/DoctorMcKay/node-steam-tradeoffer-manager/wiki/Access-Tokens
             language: 'en',
             pollInterval: -1,
             cancelTime: 15 * 60 * 1000,
@@ -312,13 +313,12 @@ export default class Bot {
 
     private getLocalizationFile(attempt: 'first' | 'retry' = 'first'): Promise<void> {
         return new Promise((resolve, reject) => {
-            axios({
-                method: 'get',
+            apiRequest<string>({
+                method: 'GET',
                 url: `https://raw.githubusercontent.com/SteamDatabase/GameTracking-TF2/master/tf/resource/tf_${this.options.tf2Language}.txt`,
                 signal: axiosAbortSignal(60000)
             })
-                .then(response => {
-                    const content = response.data as string;
+                .then(content => {
                     this.tf2.setLang(content);
                     return resolve();
                 })
@@ -548,31 +548,29 @@ export default class Bot {
         attempt: 'first' | 'retry' = 'first'
     ): Promise<{ version: string; canUpdateRepo: boolean; updateMessage: string }> {
         return new Promise((resolve, reject) => {
-            void axios({
+            apiRequest<GithubPackageJson>({
                 method: 'GET',
                 url: 'https://raw.githubusercontent.com/TF2Autobot/tf2autobot/master/package.json',
                 signal: axiosAbortSignal(60000)
             })
-                .then(response => {
-                    /*eslint-disable */
-                    const data = response.data;
+                .then(data => {
                     return resolve({
                         version: data.version,
                         canUpdateRepo: data.updaterepo,
                         updateMessage: data.updateMessage
                     });
-                    /*eslint-enable */
                 })
-                .catch((err: AxiosError) => {
+                .catch(err => {
                     if (err instanceof AbortSignal && attempt !== 'retry') {
                         return this.getLatestVersion('retry');
                     }
-                    reject(filterAxiosError(err));
+                    reject(err);
                 });
         });
     }
 
     startAutoRefreshListings(): void {
+        return;
         // Automatically check for missing listings every 30 minutes
         let pricelistLength = 0;
 
@@ -960,7 +958,7 @@ export default class Bot {
                         });
                     },
                     (callback): void => {
-                        log.info('Getting Steam API key...');
+                        log.info('Setting cookies...');
                         void this.setCookies(cookies).asCallback(callback);
                     },
                     (callback): void => {
@@ -984,8 +982,7 @@ export default class Bot {
                     },
                     (callback): void => {
                         this.schemaManager = new SchemaManager({
-                            apiKey: this.manager.apiKey,
-                            updateTime: 24 * 60 * 60 * 1000,
+                            updateTime: 1 * 60 * 60 * 1000,
                             lite: true
                         });
 
@@ -1247,6 +1244,10 @@ export default class Bot {
             this.listingManager.setUserID(this.userID);
         }
 
+        if (this.options.steamApiKey) {
+            this.manager.apiKey = this.options.steamApiKey;
+        }
+
         return new Promise((resolve, reject) => {
             this.manager.setCookies(cookies, err => {
                 if (err) {
@@ -1401,7 +1402,7 @@ export default class Bot {
                     resolve(null);
                 };
 
-                const errorEvent = (err): void => {
+                const errorEvent = (err: CustomError): void => {
                     gotEvent();
 
                     this.client.removeListener('loggedOn', loggedOnEvent);
@@ -1409,7 +1410,14 @@ export default class Bot {
 
                     log.error('Failed to sign in to Steam: ', err);
 
-                    reject(err);
+                    if (err.eresult === EResult.AccessDenied) {
+                        // Access denied during login
+                        this.deleteRefreshToken().finally(() => {
+                            reject(err);
+                        });
+                    } else {
+                        reject(err);
+                    }
                 };
 
                 const timeout = setTimeout(() => {
@@ -1717,4 +1725,10 @@ export default class Bot {
     isCloned(): boolean {
         return fs.existsSync(path.resolve(__dirname, '..', '..', '.git'));
     }
+}
+
+interface GithubPackageJson {
+    version: string;
+    updaterepo: boolean;
+    updateMessage: string;
 }
