@@ -435,47 +435,32 @@ export default class MyHandler extends Handler {
         }
     }
 
-    async onMessage(steamID: SteamID, message: string): Promise<void> {
-        if (!this.opt.commands.enable) {
-            if (!this.bot.isAdmin(steamID)) {
-                const custom = this.opt.commands.customDisableReply;
-                return this.bot.sendMessage(steamID, custom ? custom : '❌ Command function is disabled by the owner.');
-            }
-        }
+    async onMessage(steamID: SteamID, message: string, respondChat = true): Promise<void | string> {
+        if (steamID instanceof SteamID && steamID.redirectAnswerTo && respondChat) {
+            // Message from Discord
+            // Maybe need refactor for duplicate codes
 
-        if (this.bot.isHalted && !this.bot.isAdmin(steamID)) {
-            const custom = this.opt.customMessage.halted;
-            return this.bot.sendMessage(
-                steamID,
-                custom ? custom : '❌ The bot is not operational right now. Please come back later.'
-            );
-        }
-
-        if (this.isUpdating) {
-            return this.bot.sendMessage(steamID, '⚠️ The bot is updating, please wait until I am back online.');
-        }
-
-        if (steamID.type !== 0) {
-            const steamID64 = steamID.toString();
-            if (!this.bot.friends.isFriend(steamID64)) {
-                return;
+            if (!this.opt.commands.enable) {
+                if (!this.bot.isAdmin(steamID)) {
+                    const custom = this.opt.commands.customDisableReply;
+                    return this.bot.sendMessage(
+                        steamID,
+                        custom ? custom : '❌ Command function is disabled by the owner.'
+                    );
+                }
             }
 
-            const friend = this.bot.friends.getFriend(steamID64);
-
-            if (friend === null) {
-                log.info(`Message from ${steamID64}: ${message}`);
-            } else {
-                log.info(`Message from ${friend.player_name} (${steamID64}): ${message}`);
+            if (this.bot.isHalted && !this.bot.isAdmin(steamID)) {
+                const custom = this.opt.customMessage.halted;
+                return this.bot.sendMessage(
+                    steamID,
+                    custom ? custom : '❌ The bot is not operational right now. Please come back later.'
+                );
+            }
+            if (this.isUpdating) {
+                return this.bot.sendMessage(steamID, '⚠️ The bot is updating, please wait until I am back online.');
             }
 
-            if (this.recentlySentMessage[steamID64] !== undefined && this.recentlySentMessage[steamID64] >= 1) {
-                return;
-            }
-
-            this.recentlySentMessage[steamID64] =
-                (this.recentlySentMessage[steamID64] === undefined ? 0 : this.recentlySentMessage[steamID64]) + 1;
-        } else if (steamID instanceof SteamID && steamID.redirectAnswerTo) {
             if (
                 this.recentlySentMessage[steamID.redirectAnswerTo.author.id] !== undefined &&
                 this.recentlySentMessage[steamID.redirectAnswerTo.author.id] >= 1
@@ -487,9 +472,67 @@ export default class MyHandler extends Handler {
                 (this.recentlySentMessage[steamID.redirectAnswerTo.author.id] === undefined
                     ? 0
                     : this.recentlySentMessage[steamID.redirectAnswerTo.author.id]) + 1;
+
+            return await this.commands.processMessage(steamID, message);
         }
 
-        await this.commands.processMessage(steamID, message);
+        // Else from Steam Chat or IPC
+
+        const old = this.bot.sendMessage.bind(this);
+        let resp = '';
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises,no-async-promise-executor
+            resp = await new Promise<string>(async resolve => {
+                if (!respondChat) this.bot.sendMessage = (id: SteamID, message: string): void => resolve(message);
+                if (!this.opt.commands.enable) {
+                    if (!this.bot.isAdmin(steamID) && respondChat) {
+                        const custom = this.opt.commands.customDisableReply;
+                        return this.bot.sendMessage(
+                            steamID,
+                            custom ? custom : '❌ Command function is disabled by the owner.'
+                        );
+                    }
+                }
+
+                if (this.bot.isHalted && !this.bot.isAdmin(steamID)) {
+                    const custom = this.opt.customMessage.halted;
+                    return this.bot.sendMessage(
+                        steamID,
+                        custom ? custom : '❌ The bot is not operational right now. Please come back later.'
+                    );
+                }
+                if (this.isUpdating) {
+                    return this.bot.sendMessage(steamID, '⚠️ The bot is updating, please wait until I am back online.');
+                }
+
+                const steamID64 = steamID.toString();
+                if (respondChat && !this.bot.friends.isFriend(steamID64)) {
+                    return;
+                }
+
+                const friend = this.bot.friends.getFriend(steamID64);
+                if (!respondChat) {
+                    log.info(`Message from IPC: ${message}`);
+                } else if (friend === null) {
+                    log.info(`Message from ${steamID64}: ${message}`);
+                } else {
+                    log.info(`Message from ${friend.player_name} (${steamID64}): ${message}`);
+                }
+
+                if (this.recentlySentMessage[steamID64] !== undefined && this.recentlySentMessage[steamID64] >= 1) {
+                    return;
+                }
+
+                this.recentlySentMessage[steamID64] =
+                    (this.recentlySentMessage[steamID64] === undefined ? 0 : this.recentlySentMessage[steamID64]) + 1;
+
+                await this.commands.processMessage(steamID, message);
+            });
+        } finally {
+            //MAKE SURE this happens
+            if (!respondChat) this.bot.sendMessage = old;
+        }
+        if (!respondChat) return resp;
     }
 
     onRefreshToken(token: string): void {

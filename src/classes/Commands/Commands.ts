@@ -106,7 +106,7 @@ export default class Commands {
 
         if (message.startsWith(prefix)) {
             if (command === 'help') {
-                void this.help.helpCommand(steamID, prefix);
+                await this.help.helpCommand(steamID, prefix);
             } else if (command === 'how2trade') {
                 this.help.howToTradeCommand(steamID, prefix);
             } else if (['price', 'pc'].includes(command)) {
@@ -172,7 +172,7 @@ export default class Commands {
             } else if (command === 'autokeys') {
                 this.manager.autokeysCommand(steamID);
             } else if (['craftweapon', 'craftweapons', 'uncraftweapon', 'uncraftweapons'].includes(command)) {
-                void this.misc.weaponCommand(
+                await this.misc.weaponCommand(
                     steamID,
                     command === 'craftweapons'
                         ? 'craftweapon'
@@ -181,7 +181,7 @@ export default class Commands {
                         : (command as CraftUncraft)
                 );
             } else if (['deposit', 'd'].includes(command) && isAdmin) {
-                void this.depositCommand(steamID, message, prefix);
+                await this.depositCommand(steamID, message, prefix);
             } else if (['withdraw', 'w'].includes(command) && isAdmin) {
                 this.withdrawCommand(steamID, message, prefix);
             } else if (command === 'withdrawmptf' && isAdmin) {
@@ -191,23 +191,23 @@ export default class Commands {
             } else if (command === 'add' && isAdmin) {
                 await this.pManager.addCommand(steamID, message);
             } else if (command === 'addbulk' && isAdmin) {
-                void this.pManager.addbulkCommand(steamID, message);
+                await this.pManager.addbulkCommand(steamID, message);
             } else if (command === 'update' && isAdmin) {
-                void this.pManager.updateCommand(steamID, message, prefix);
+                await this.pManager.updateCommand(steamID, message, prefix);
             } else if (command === 'updatebulk' && isAdmin) {
-                void this.pManager.updatebulkCommand(steamID, message);
+                await this.pManager.updatebulkCommand(steamID, message);
             } else if (command === 'remove' && isAdmin) {
-                void this.pManager.removeCommand(steamID, message);
+                await this.pManager.removeCommand(steamID, message);
             } else if (command === 'removebulk' && isAdmin) {
                 this.pManager.removebulkCommand(steamID, message);
             } else if (command === 'get' && isAdmin) {
                 this.pManager.getCommand(steamID, message);
             } else if (command === 'getall' && isAdmin) {
-                void this.pManager.getAllCommand(steamID, message);
+                await this.pManager.getAllCommand(steamID, message);
             } else if (command === 'ppu' && isAdmin) {
-                void this.pManager.partialPriceUpdateCommand(steamID, message);
+                await this.pManager.partialPriceUpdateCommand(steamID, message);
             } else if (['getslots', 'listings'].includes(command) && isAdmin) {
-                void this.pManager.getSlotsCommand(steamID);
+                this.pManager.getSlotsCommand(steamID);
             } else if (command === 'groups' && isAdmin) {
                 void this.pManager.getGroupsCommand(steamID);
             } else if (command === 'autoadd' && isAdmin) {
@@ -221,9 +221,9 @@ export default class Commands {
             } else if (['block', 'unblock'].includes(command) && isAdmin) {
                 this.manager.blockUnblockCommand(steamID, message, command as BlockUnblock);
             } else if (['blockedlist', 'blocklist', 'blist'].includes(command) && isAdmin) {
-                void this.manager.blockedListCommand(steamID);
+                this.manager.blockedListCommand(steamID);
             } else if (command === 'clearfriends' && isAdmin) {
-                this.manager.clearFriendsCommand(steamID);
+                await this.manager.clearFriendsCommand(steamID);
             } else if (command === 'stop' && isAdmin) {
                 this.manager.stopCommand(steamID);
             } else if (command === 'halt' && isAdmin) {
@@ -241,11 +241,11 @@ export default class Commands {
             } else if (command === 'refreshlist' && isAdmin) {
                 this.manager.refreshListingsCommand(steamID);
             } else if (command === 'stats' && isAdmin) {
-                void this.status.statsCommand(steamID);
+                await this.status.statsCommand(steamID);
             } else if (command === 'statsdw' && isAdmin) {
                 this.status.statsDWCommand(steamID);
             } else if (command === 'itemstats' && (isAdmin || isWhitelisted)) {
-                void this.status.itemStatsCommand(steamID, message);
+                await this.status.itemStatsCommand(steamID, message);
             } else if (command == 'wipestats' && isAdmin) {
                 this.status.statsWipeCommand(steamID, message);
             } else if (command === 'inventory' && isAdmin) {
@@ -257,23 +257,23 @@ export default class Commands {
             } else if (command === 'trade' && isAdmin) {
                 this.review.tradeCommand(steamID, message, prefix);
             } else if (['accepttrade', 'accept', 'declinetrade', 'decline'].includes(command) && isAdmin) {
-                void this.review.actionOnTradeCommand(steamID, message, command as ActionOnTrade);
+                await this.review.actionOnTradeCommand(steamID, message, command as ActionOnTrade);
             } else if (['faccept', 'fdecline'].includes(command) && isAdmin) {
-                void this.review.forceAction(steamID, message, command as ForceAction);
+                await this.review.forceAction(steamID, message, command as ForceAction);
             } else if (command === 'offerinfo' && isAdmin) {
                 this.review.offerInfo(steamID, message, prefix);
             } else if (command === 'pricecheck' && isAdmin) {
                 this.request.pricecheckCommand(steamID, message);
             } else if (command === 'pricecheckall' && isAdmin) {
-                void this.request.pricecheckAllCommand(steamID);
+                this.request.pricecheckAllCommand(steamID);
             } else if (command === 'check' && isAdmin) {
-                void this.request.checkCommand(steamID, message);
+                await this.request.checkCommand(steamID, message);
             } else if (command === 'find' && isAdmin) {
-                void this.pManager.findCommand(steamID, message);
+                await this.pManager.findCommand(steamID, message);
             } else if (command == 'backup' && isAdmin) {
                 void this.opt.backupPricelistCommand(steamID);
             } else if (command === 'options' && isAdmin) {
-                void this.opt.optionsCommand(steamID, message, prefix);
+                await this.opt.optionsCommand(steamID, message, prefix);
             } else if (command === 'config' && isAdmin) {
                 this.opt.updateOptionsCommand(steamID, message);
             } else if (command === 'cleararray' && isAdmin) {
