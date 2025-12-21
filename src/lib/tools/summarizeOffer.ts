@@ -188,6 +188,7 @@ function getSummary(
         }
         const name = properName ? generateName : replace.itemName(generateName || 'unknown');
 
+        const pureSku = ['5021;6', '5002;6', '5001;6', '5000;6'];
         if (showStockChanges) {
             let oldStock: number | null = 0;
             const currentStock = bot.inventoryManager.getInventory.getAmount({
