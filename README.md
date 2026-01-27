@@ -14,9 +14,9 @@ If you already know how to run TF2Autobot, you can treat this as a drop‑in rep
 
 All general installation and configuration steps are the same as TF2Autobot. Follow the original wiki for:
 
--   [Setup & configuration](https://github.com/idinium96/tf2autobot/wiki)
--   [Environment variables](https://github.com/idinium96/tf2autobot/wiki/Configuring-the-bot)
--   [`options.json` reference](https://github.com/idinium96/tf2autobot/wiki/Configure-your-options.json-file)
+-   [Setup & configuration](https://github.com/TF2-Price-DB/tf2autobot-pricedb/wiki)
+-   [Environment variables](https://github.com/TF2-Price-DB/tf2autobot-pricedb/wiki/Configuring-the-bot)
+-   [`options.json` reference](https://github.com/TF2-Price-DB/tf2autobot-pricedb/wiki/Configure-your-options.json-file)
 
 When the wiki tells you to clone the TF2Autobot repo, use this fork instead:
 
@@ -53,6 +53,14 @@ For example `!buy Burning Team Captain` becomes `buy_burning_team_captain` which
     "buy": "🔥 %price% 📦 Stock : %current_stock% / %max_stock%. 💬 Send %ecp_item%. 👉 Visit %pricedb_store% for my store!",
     "sell": "🔥 %price% 📦 Stock : %amount_trade% / %max_stock%. 💬 Send %ecp_item%. 👉 Visit %pricedb_store% for my store!",
 ```
+
+- `%price%` - displays the price (e.g., `14 keys`).
+- `%name%` - displays the **item name** or **itemID**.
+- `%ecp_item%` - displays the trading command (e.g., 𝘀𝗲𝗹𝗹_𝗠𝗮𝗻𝗻_𝗖𝗼_𝗦𝘂𝗽𝗽𝗹𝘆_𝗖𝗿𝗮𝘁𝗲_𝗞𝗲𝘆).
+- `%max_stock%` - displays the maximum capacity of the item in the bot's inventory.
+- `%current_stock%` - displays the current count of the item in the bot's inventory.
+- `%pricedb_store%` - displays the URL of the bot's PriceDB store.
+- `%pricedb_item%` - displays the URL of the item. 
 
 This results in listings like the below
 
@@ -184,11 +192,11 @@ If key buy price is 60 ref and sell price is 61 ref:
 
 ## Links
 
-For general documentation, troubleshooting and FAQs, keep using the original TF2Autobot wiki:
+For general documentation, troubleshooting and FAQs, use the following wiki:
 
--   [Wiki home](https://github.com/idinium96/tf2autobot/wiki)
--   [Common errors](https://github.com/idinium96/tf2autobot/wiki/Common-Errors)
--   [FAQ](https://github.com/idinium96/tf2autobot/wiki/FAQ)
+-   [Wiki home](https://github.com/TF2-Price-DB/tf2autobot-pricedb/wiki)
+-   [Common errors](https://github.com/TF2-Price-DB/tf2autobot-pricedb/wiki/Common-Errors)
+-   [FAQ](https://github.com/TF2-Price-DB/tf2autobot-pricedb/wiki/FAQ)
 
 For issues or questions specific to this pricedb.io fork (or to my services), please join our Discord:
 

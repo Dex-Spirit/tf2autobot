@@ -221,7 +221,7 @@ function getSummary(
                                 ? pureEmoji.get(sku)
                                 : name
                             : name
-                    }](https://autobot.tf/items/${sku})${
+                    }](https://pricedb.io/item/${sku})${
                         amount > 1 || (bot.options.tradeSummary.showPureInEmoji && pureSku.includes(sku))
                             ? ` x${amount}`
                             : ''
@@ -301,7 +301,7 @@ function getSummary(
                                 ? pureEmoji.get(sku)
                                 : name
                             : name
-                    }](https://autobot.tf/items/${sku})${amount > 1 ? ` x${amount}` : ''}`
+                    }](https://pricedb.io/item/${sku})${amount > 1 ? ` x${amount}` : ''}`
                 );
             } else {
                 summary.push(name + (amount > 1 ? ` x${amount}` : ''));
