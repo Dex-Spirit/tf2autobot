@@ -267,13 +267,19 @@ export default class PricelistManagerCommands {
 
                     delete params.item;
                 } else {
-                    errorMessage.push(
-                        `❌ Failed to add "${itemToAdd}": Please only use "sku" or "item" parameter, ` +
-                            `OR check if you have missing something. Thank you.`
-                    );
-                    failed++;
-                    failedNotUsingItemOrSkuParam++;
-                    continue;
+                    const item = getItemFromParams(steamID, params, this.bot);
+
+                    if (item === null) {
+                        errorMessage.push(
+                            `❌ Failed to add "${itemToAdd}": Please only use "sku" or "item" parameter, ` +
+                                `OR check if you have missing something. Thank you.`
+                        );
+                        failed++;
+                        failedNotUsingItemOrSkuParam++;
+                        continue;
+                    }
+
+                    params.sku = SKU.fromObject(item);
                 }
             }
 
@@ -1063,8 +1069,15 @@ export default class PricelistManagerCommands {
 
         let priceKey: string = undefined;
         if (params.id) {
-            priceKey = String(params.id);
             params.id = String(params.id);
+            priceKey = params.id;
+
+            if (typeof params.intent === 'number' && [0, 2].includes(params.intent)) {
+                this.bot.sendMessage(
+                    steamID,
+                    `❌ Failed to update ${params.id}: Intent should only be sell for assetid!`
+                );
+            }
         }
         priceKey = priceKey ? priceKey : params.sku;
 
@@ -1277,20 +1290,32 @@ export default class PricelistManagerCommands {
 
                     delete params.item;
                 } else {
-                    errorMessage.push(
-                        `❌ Failed to update "${itemToUpdate}": Please only use "sku" or "item" parameter, ` +
-                            `OR check if you have missing something. Thank you.`
-                    );
-                    failed++;
-                    failedNotUsingItemOrSkuParam++;
-                    continue;
+                    const item = getItemFromParams(steamID, params, this.bot);
+
+                    if (item === null) {
+                        errorMessage.push(
+                            `❌ Failed to update "${itemToUpdate}": Please only use "sku" or "item" parameter, ` +
+                                `OR check if you have missing something. Thank you.`
+                        );
+                        failed++;
+                        failedNotUsingItemOrSkuParam++;
+                        continue;
+                    }
+
+                    params.sku = SKU.fromObject(item);
                 }
             }
 
             let priceKey: string = undefined;
             if (params.id) {
-                priceKey = String(params.id);
                 params.id = String(params.id);
+                priceKey = params.id;
+
+                if (typeof params.intent === 'number' && [0, 2].includes(params.intent)) {
+                    errorMessage.push(`❌ Failed to update ${params.id}: Intent should only be sell for assetid!`);
+                    failed++;
+                    continue;
+                }
             }
             priceKey = priceKey ? priceKey : sku;
 
@@ -1787,8 +1812,8 @@ export default class PricelistManagerCommands {
 
         let priceKey: string = undefined;
         if (params.id) {
-            priceKey = String(params.id);
             params.id = String(params.id);
+            priceKey = params.id;
         }
         priceKey = priceKey ? priceKey : sku;
 
@@ -2041,8 +2066,8 @@ export default class PricelistManagerCommands {
 
         let priceKey: string = undefined;
         if (params.id) {
-            priceKey = String(params.id);
             params.id = String(params.id);
+            priceKey = params.id;
         }
         priceKey = priceKey ? priceKey : sku;
         const match = this.bot.pricelist.getPrice({ priceKey });
