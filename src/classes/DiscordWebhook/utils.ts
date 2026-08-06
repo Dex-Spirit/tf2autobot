@@ -69,3 +69,9 @@ export interface WebhookError {
     err: ErrorFiltered;
     webhook: Webhook;
 }
+
+export interface WebhookErrorData {
+    message: string;
+    retry_after: number;
+    global: boolean;
+}
