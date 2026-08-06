@@ -4,6 +4,7 @@ import { Webhook } from './interfaces';
 import { timeNow, uptime } from '../../lib/tools/time';
 import Bot from '../Bot';
 import * as timersPromises from 'timers/promises';
+import log from '../../lib/logger';
 
 type AlertType =
     | 'lowPure'
@@ -416,12 +417,11 @@ class AlertPpuQueue {
 
         sendWebhook(alert.url, alert.webhook, 'alert')
             .catch((e: WebhookError) => {
-                if (typeof e.err?.data !== 'string') {
-                    if (e.err.data.message === 'The resource is being rate limited.') {
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                        this.sleepTime = e.err.data.retry_after;
-                        this.isRateLimited = true;
-                    }
+                if (e.err.status === 429) {
+                    log.warn(`❌ Failed to send alert to Discord: `, e.err);
+                    const retryAfter = (e.err.data as WebhookErrorData)?.retry_after;
+                    this.sleepTime = typeof retryAfter === 'number' ? Math.ceil(retryAfter * 1000) : 3000;
+                    this.isRateLimited = true;
                 }
             })
             .finally(() => {
