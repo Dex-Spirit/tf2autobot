@@ -12,7 +12,19 @@ import type { FIFOEntry } from '../InventoryCostBasis';
 import type { TradeCardMeta, TradeCardOptions } from './tradeCard';
 // A direct import, unlike ./tradeCard below: offerFacts pulls in no native
 // canvas binding, so it cannot be the thing that costs us the summary.
-import { amountOf, formatDuration, KEY_SKU, METAL_SKUS, PURE_SKUS, unitValueOf } from './tradeCard/offerFacts';
+import {
+    amountOf,
+    collectPricedItems,
+    collectStatReadings,
+    formatDuration,
+    KEY_SKU,
+    METAL_SKUS,
+    PricedItem,
+    priceRows,
+    PURE_SKUS,
+    StatReading,
+    unitValueOf
+} from './tradeCard/offerFacts';
 
 /** `IS_COMPONENTS_V2` — required on any message that sets `components`. */
 const COMPONENTS_V2_FLAG = 1 << 15;
@@ -43,6 +55,12 @@ const MAX_HIGH_VALUE_LINES = 3;
 const HIGH_VALUE_LINE_CAP = 240;
 /** Past a handful of sales the block stops being read, so it aggregates instead. */
 const MAX_PROFIT_LINES = 3;
+/**
+ * The floor the fixed blocks (detail + status + header + subtext) must leave
+ * before the verbose detail form is allowed: roughly one side block's worth, so
+ * the item links never starve just because XML-style flagged names got roomy.
+ */
+const MIN_LINK_BUDGET = 800;
 
 export default async function sendTradeSummary(
     offer: TradeOffer,
@@ -99,15 +117,23 @@ export default async function sendTradeSummary(
     // ── Header ────────────────────────────────────────────────────────────────
     const net = t.isNetOverpayRelevant('summary-accepted', isOfferSent) ? t.getNetOverpay(offer, bot) : null;
 
+    const meta: TradeCardMeta = {
+        timeTakenToComplete,
+        timeTakenToProcessOrConstruct,
+        timeTakenToCounterOffer,
+        isOfferSent,
+        net
+    };
     const cardOptions = optDW.tradeSummary.tradeCard;
     const card = cardOptions.enable
-        ? await renderCard(offer, bot, cardOptions, {
-              timeTakenToComplete,
-              timeTakenToProcessOrConstruct,
-              timeTakenToCounterOffer,
-              isOfferSent,
-              net
-          })
+        ? await renderCard(
+              offer,
+              bot,
+              // The spread carries the card options output of `enable`, which
+              // TradeCardOptions does not itself carry.
+              { ...cardOptions, partnerName: details.personaName, partnerAvatarUrl: details.avatarFull },
+              meta
+          )
         : null;
     const attachmentName = `trade-${offer.id}.png`;
 
@@ -150,20 +176,49 @@ export default async function sendTradeSummary(
     const unixSeconds = Math.floor(Date.now() / 1000);
     const subtextBlock = `-# 🤖 ${botLinks}\n` + `-# ${identity}\n` + `-# <t:${unixSeconds}:f> · <t:${unixSeconds}:R>`;
 
-    const detailBlock = buildDetailBlock(
-        isShowOfferMessage ? message : '',
+    const flags = [
+        { label: '🟨 invalid', count: itemsName.invalid.length },
+        { label: '🟧 disabled', count: itemsName.disabled.length },
+        { label: '🟦 overstocked', count: itemsName.overstock.length },
+        // No high-value count: their attributes are named in full below.
+        { label: '🟩 understocked', count: itemsName.understock.length }
+    ];
+
+    // The status block is the card's text twin: the same readings and prices the
+    // card would draw, so the summary never loses them to a render failure.
+    const statusText =
+        card === null
+            ? buildStatusBlock(collectStatReadings(bot, meta), collectPricedItems(offer, bot, keyRateMetal))
+            : '';
+
+    // Decide the verbosity on the *compact* form (fixed blocks only, so a big
+    // trade cannot starve the item links), then rebuild verbose if there is
+    // still room for roughly a side block's worth of links.
+    const detailMessage = isShowOfferMessage ? message : '';
+    const compact = buildDetailBlock(
+        detailMessage,
         cTOfferMessage,
-        [
-            { label: '🟨 invalid', count: itemsName.invalid.length },
-            { label: '🟧 disabled', count: itemsName.disabled.length },
-            { label: '🟦 overstocked', count: itemsName.overstock.length },
-            // No high-value count: their attributes are named in full below.
-            { label: '🟩 understocked', count: itemsName.understock.length }
-        ],
+        flags,
         itemsName.highValue,
         profitData,
-        keyRateMetal
+        keyRateMetal,
+        { offer, bot, itemsName, verbose: false }
     );
+    const compactFixed = headerBlock.length + compact.length + statusText.length + subtextBlock.length;
+    const verbose = TOTAL_TEXT_BUDGET - BUDGET_SAFETY_MARGIN - compactFixed >= MIN_LINK_BUDGET;
+
+    let detailBlock = verbose
+        ? buildDetailBlock(detailMessage, cTOfferMessage, flags, itemsName.highValue, profitData, keyRateMetal, {
+              offer,
+              bot,
+              itemsName,
+              verbose: true
+          })
+        : compact;
+
+    if (statusText.length > 0) {
+        detailBlock += `\n${statusText}`;
+    }
 
     const fixedTextLength = headerBlock.length + detailBlock.length + subtextBlock.length;
     const linkBudget = Math.max(0, TOTAL_TEXT_BUDGET - BUDGET_SAFETY_MARGIN - fixedTextLength);
@@ -314,6 +369,9 @@ function collectLinkedEntries(
 
     const properName = bot.options.tradeSummary.showProperName;
     const showStock = bot.options.tradeSummary.showStockChanges;
+    // `showPureInEmoji` renders pure as its emoji token on the card and the
+    // item list alike — the same map the Steam-chat summary already uses.
+    const showPureEmoji = bot.options.tradeSummary?.showPureInEmoji === true;
     const entries: LinkedEntry[] = [];
     const pure: LinkedEntry[] = [];
 
@@ -328,9 +386,12 @@ function collectLinkedEntries(
 
         try {
             const generated = bot.schema.getName(SKU.fromString(sku), properName);
+            // `get` is only consulted for a pure sku (PURE_SKUS), which the map
+            // always holds; undefined for anything else falls through to the name.
+            const emoji = showPureEmoji ? t.pureEmoji.get(sku) : undefined;
             const entry: LinkedEntry = {
                 sku,
-                name: properName ? generated : t.replace.itemName(generated),
+                name: emoji ?? (properName ? generated : t.replace.itemName(generated)),
                 amount,
                 value: valueOf(priceKey),
                 // Shared with the text summary so the two can never disagree
@@ -457,10 +518,39 @@ export function buildItemLinkBlocks(
     return blocks;
 }
 
+/** The shape sendTradeSummary builds for `t.listItems`: the flag lists, named. */
+type ItemsName = {
+    invalid: string[];
+    disabled: string[];
+    overstock: string[];
+    understock: string[];
+    duped: string[];
+    dupedFailed: string[];
+    highValue: string[];
+};
+
+/**
+ * When the budget allows, the detail block names the flagged items in full via
+ * the old `listItems` block instead of counting them and naming high values.
+ * `verbose: false` (the default, and all existing callers) is today's behaviour.
+ */
+interface DetailExtra {
+    verbose?: boolean;
+    offer?: TradeOffer;
+    bot?: Bot;
+    itemsName?: ItemsName;
+}
+
 /**
  * Everything the card cannot carry: offer message, the stock-flag counts,
  * high-value attributes and per-item profit, in that order. Shown whether or not
  * the card rendered.
+ *
+ * With `extra.verbose` the flag count and the `highValueLines(...)` output are
+ * replaced by a single wholesale `t.listItems(...)` block (its `@` field
+ * splitter stripped — meaningless in a Text Display): the old embed's own
+ * renderer, reusing its HIGH_VALUE_ITEMS section and its `showItemPrices` gate
+ * rather than writing a second one.
  */
 export function buildDetailBlock(
     message: string,
@@ -468,21 +558,92 @@ export function buildDetailBlock(
     flags: { label: string; count: number }[],
     highValue: string[],
     profits: ProfitData,
-    keyRateMetal: number
+    keyRateMetal: number,
+    extra?: DetailExtra
 ): string {
+    const { verbose = false, offer, bot, itemsName } = extra ?? {};
     const lines: string[] = [];
 
     if (message.length > 0) {
         lines.push(`${offerMessageLabel} "${clamp(message, MESSAGE_CAP)}"`);
     }
 
-    const activeFlags = flags.filter(f => f.count > 0);
-    if (activeFlags.length > 0) {
-        lines.push(activeFlags.map(f => `${f.label} ${f.count}`).join('  ·  '));
+    if (verbose && offer && bot && itemsName) {
+        // Prices already live on the rendered card (and, card-absent, in the
+        // buildStatusBlock fallback below), so this verbatim listItems block
+        // reuses only its flag and high-value naming — never a second set of
+        // prices. Flip its own showItemPrices gate off instead of slicing the
+        // string. The clone is a shallow options override; listItems only reads
+        // tradeSummary options, schema, and pricelist (all preserved by ref).
+        const tSum = bot.options.tradeSummary;
+        const listBot = tSum
+            ? ({ ...bot, options: { ...bot.options, tradeSummary: { ...tSum, showItemPrices: false } } } as Bot)
+            : bot;
+
+        const listed = t.listItems(offer, listBot, itemsName, false).replace(/@/g, '');
+        if (listed !== '-') {
+            lines.push(listed);
+        }
+    } else {
+        const activeFlags = flags.filter(f => f.count > 0);
+        if (activeFlags.length > 0) {
+            lines.push(activeFlags.map(f => `${f.label} ${f.count}`).join('  ·  '));
+        }
+
+        lines.push(...highValueLines(highValue));
     }
 
-    lines.push(...highValueLines(highValue));
     lines.push(...profitLines(profits, keyRateMetal));
+
+    return lines.join('\n');
+}
+
+/**
+ * The card-disabled fallback: one markdown line per stat reading, in the same
+ * order the card draws them, plus the priced items when the card is absent.
+ * Lives here (not in offerFacts) because it is presentation; the readings are
+ * the shared facts both this and the card format, so the toggles cannot drift.
+ *
+ * `prices` come from `collectPricedItems` (already `showItemPrices`-gated), so
+ * this is the single text-home of prices when there is no card to draw them.
+ */
+export function buildStatusBlock(readings: StatReading[], prices: PricedItem[]): string {
+    const lines: string[] = [];
+
+    for (const r of readings) {
+        switch (r.kind) {
+            case 'keyRate':
+                lines.push(`${r.label} ${r.value}  ·  ${r.sub}`);
+                break;
+            case 'pureStock':
+                lines.push(`${r.label} ${r.value}  ·  ${r.sub}`);
+                break;
+            case 'totalItems':
+                lines.push(`${r.label} ${r.value}${r.sub ? ` ${r.sub}` : ''}`);
+                break;
+            case 'timeTaken':
+                if (r.detailed) {
+                    lines.push(r.label);
+                    for (const [caption, figure, ms] of r.rows) {
+                        lines.push(`- ${caption}: ${figure}${r.showMs ? ` (${ms} ms)` : ''}`);
+                    }
+                } else {
+                    const [, figure, ms] = r.rows[0];
+                    lines.push(`${r.label} ${figure}${r.showMs ? ` (${ms} ms)` : ''}`);
+                }
+                break;
+        }
+    }
+
+    if (prices.length > 0) {
+        lines.push('📜 **Item prices**');
+        // The card's own row shaper decides how many fit and what the overflow
+        // row says, so the two renderings cannot disagree on the cut. Its
+        // overflow row carries an empty right half; that one goes out bare.
+        for (const [left, right] of priceRows(prices)) {
+            lines.push(right ? `- **${clamp(left, NAME_CAP)}** ${right}` : left);
+        }
+    }
 
     return lines.join('\n');
 }

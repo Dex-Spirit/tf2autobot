@@ -3,7 +3,7 @@ import Bot from '../../classes/Bot';
 import SKU from '@tf2autobot/tf2-sku';
 import { ValueDiff, replace, testPriceKey } from '../tools/export';
 
-const pureEmoji = new Map<string, string>();
+export const pureEmoji = new Map<string, string>();
 pureEmoji
     .set('5021;6', '<:tf2key:813050393793658930>')
     .set('5002;6', '<:tf2refined:813050808605212672>')

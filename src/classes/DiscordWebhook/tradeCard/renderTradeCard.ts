@@ -2,15 +2,22 @@ import path from 'path';
 import { TradeOffer, ItemsDict, ItemsValue, OurTheirItemsDict, HighValueOutput } from '@tf2autobot/tradeoffer-manager';
 import Currencies from '@tf2autobot/tf2-currencies';
 import SKU from '@tf2autobot/tf2-sku';
-import pluralize from 'pluralize';
 import { createCanvas, GlobalFonts, Image, SKRSContext2D } from '@napi-rs/canvas';
 import Bot from '../../Bot';
 import log from '../../../lib/logger';
 import { testPriceKey } from '../../../lib/tools/export';
-import { currPure } from '../../../lib/tools/pure';
 import { qualityColorHex } from '../../../lib/tools/qualityColor';
-import { amountOf, collectPricedItems, formatDuration, PricedItem, PURE_SKUS, unitValueOf } from './offerFacts';
-import { getItemIcon, TILE_SIZE } from './itemImageCache';
+import {
+    amountOf,
+    collectPricedItems,
+    collectStatReadings,
+    PricedItem,
+    priceRows,
+    PURE_SKUS,
+    StatReading,
+    unitValueOf
+} from './offerFacts';
+import { getItemIcon, loadAvatar, TILE_SIZE } from './itemImageCache';
 import {
     AttributeIcon,
     buildTileAttributes,
@@ -84,7 +91,12 @@ const STAT_RADIUS = 14;
 const STAT_PAD = 14;
 const PRICE_HEADER_HEIGHT = px(36);
 const PRICE_ROW_HEIGHT = px(46);
-const MAX_PRICE_ROWS = 5;
+// The partner's own strip at the very top: a circular avatar and the persona
+// name, above the bands. ~65 source pixels hold it, so the card's aspect ratio
+// stays inside the 1.5–4.0 rails at both extremes of the grid.
+const AVATAR_SIZE = px(34);
+const PROFILE_HEIGHT = px(49);
+const PROFILE_GAP = px(16);
 // A marker on the art, not a second subject: inside ~30% of the tile.
 const ICON_SIZE = px(30);
 const ICON_GAP = px(5);
@@ -608,9 +620,10 @@ function drawStatCell(ctx: SKRSContext2D, box: StatBox, x: number, y: number, wi
     ctx.fillText(fitText(ctx, box.label, FONT_REGULAR, layout.labelSize, inner), left, y + layout.labelBaseline);
 
     if (box.rows) {
-        // Caption left, figure right. The two rows borrow the value and sub
-        // baselines so a rows cell lines up with its neighbours.
-        const baselines = [layout.valueBaseline, layout.subBaseline];
+        // Caption left, figure right. Rows borrow the value, sub and note
+        // baselines so a rows cell lines up with its neighbours — the third
+        // lets the detailed time-taken cell carry all three of its lines.
+        const baselines = [layout.valueBaseline, layout.subBaseline, layout.noteBaseline];
         const captionSize = Math.round(layout.valueSize * 0.62);
         const figureSize = Math.round(layout.valueSize * 0.7);
 
@@ -644,23 +657,6 @@ function drawStatCell(ctx: SKRSContext2D, box: StatBox, x: number, y: number, wi
         ctx.fillStyle = MUTED_COLOR;
         ctx.fillText(fitText(ctx, box.note, FONT_REGULAR, layout.noteSize, inner), left, y + layout.noteBaseline);
     }
-}
-
-/**
- * The rows the price section will draw: name on the left, buy/sell on the right.
- * An overflow row spends the last slot on a count rather than a fourth item.
- */
-function priceRows(items: PricedItem[]): [string, string][] {
-    const priced = (item: PricedItem): [string, string] => [item.name, `${item.buy} / ${item.sell}`];
-
-    if (items.length <= MAX_PRICE_ROWS) {
-        return items.map(priced);
-    }
-
-    const shown = items.slice(0, MAX_PRICE_ROWS - 1);
-    const hidden = items.length - shown.length;
-
-    return [...shown.map(priced), [`+${hidden} more priced ${hidden === 1 ? 'item' : 'items'}`, '']];
 }
 
 /** What each item was bought and sold at, with room for the full name. */
@@ -698,79 +694,63 @@ function drawPriceRows(ctx: SKRSContext2D, cardWidth: number, rows: [string, str
 }
 
 /**
+ * The glyphs the NotoEmoji subset carries (see assets/fonts/NotoEmoji-Subset.
+ * README.txt). Everything else outside Inter's Latin-1 is stripped from a card
+ * label, so a custom `customText.*.discordWebhook` can never stall on a glyph
+ * the card's backing fonts do not map.
+ */
+const EMOJI_GLYPHS = new Set([
+    0x2b50, 0x2728, 0x1f525, 0x26a1, 0x1f32a, 0x2668, 0x1f4ab, 0x1f4a5, 0x1f300, 0x1f527, 0x1f3a8, 0x1f463, 0x1f50a,
+    0x1f383, 0x1f47b
+]);
+
+/**
+ * A label for the card surface: Discord markdown never belongs there, and nor
+ * does a glyph the card's fonts cannot draw. Strip both, lose any trailing
+ * colon, uppercase, then fall back when nothing survives. Used for the four
+ * `customText.*.discordWebhook` labels the card draws.
+ */
+export function cardLabel(raw: string, fallback: string): string {
+    const kept = Array.from(raw.replace(/[*_`~|[\]()>]/g, ''))
+        .filter(ch => {
+            const cp = ch.codePointAt(0) ?? 0;
+            return cp <= 0xff || EMOJI_GLYPHS.has(cp);
+        })
+        .join('');
+
+    const cleaned = kept.replace(/:+$/, '').trim().toUpperCase();
+    return cleaned.length > 0 ? cleaned : fallback;
+}
+
+/**
+ * One shared reading → the StatBox the card draws. The readings come from
+ * `collectStatReadings`, so the card and the text fallback format the same
+ * facts and can never disagree about which `misc.*` toggle gates them.
+ */
+function boxFromReading(r: StatReading): StatBox {
+    switch (r.kind) {
+        case 'keyRate':
+            return { label: cardLabel(r.label, 'KEY RATE'), value: r.value, sub: r.sub, note: r.note };
+        case 'pureStock':
+            return { label: cardLabel(r.label, 'PURE STOCK'), value: r.value, sub: r.sub };
+        case 'totalItems':
+            return { label: cardLabel(r.label, 'TOTAL ITEMS'), value: r.value, sub: r.sub };
+        case 'timeTaken':
+            return {
+                label: cardLabel(r.label, 'TIME TAKEN'),
+                // The exact millisecond count reads better as the figure itself
+                // in a quarter-width cell than upstream's "(4200 ms)".
+                rows: r.rows.map(([caption, figure, ms]) => [caption, r.showMs ? `${ms} ms` : figure])
+            };
+    }
+}
+
+/**
  * The bot-side numbers that used to be embed fields. Each still answers to its
  * own `misc.*` toggle; a disabled one is simply not built and the row reflows.
  */
 function buildStatBoxes(bot: Bot, meta: TradeCardMeta): StatBox[] {
-    const misc = bot.options.discordWebhook.tradeSummary.misc;
-    const boxes: StatBox[] = [];
-
-    if (misc.showKeyRate) {
-        const keyPrices = bot.pricelist.getKeyPrices;
-        const autokeys = bot.handler.autokeys;
-        const status = autokeys.getOverallStatus;
-
-        boxes.push({
-            label: 'KEY RATE',
-            value: `${keyPrices.buy.metal.toString()} / ${keyPrices.sell.metal.toString()} ref`,
-            sub:
-                keyPrices.src === 'manual'
-                    ? 'manual'
-                    : bot.pricelist.isUseCustomPricer
-                    ? 'custom-pricer'
-                    : 'PriceDB.IO',
-            // Spelled out: "AK" means nothing without the options file to hand.
-            note: autokeys.isEnabled
-                ? autokeys.getActiveStatus
-                    ? `Autokeys ${status.isBankingKeys ? 'bank' : status.isBuyingKeys ? 'buy' : 'sell'}`
-                    : 'Autokeys idle'
-                : undefined
-        });
-    }
-
-    if (misc.showPureStock) {
-        const pure = currPure(bot);
-        // A slash triple rather than the chat command's "380 ref, 26 rec, 11
-        // scrap", which is twice as wide as a quarter-width box.
-        const refined = Currencies.toRefined(pure.refTotalInScrap);
-
-        boxes.push({
-            label: 'PURE STOCK',
-            value: `${pure.key} ${pluralize('key', pure.key)}`,
-            sub: `${refined} ref (${pure.ref}/${pure.rec}/${pure.scrap})`
-        });
-    }
-
-    if (misc.showInventory) {
-        const slots = bot.tf2.backpackSlots;
-        boxes.push({
-            label: 'TOTAL ITEMS',
-            value: `${bot.inventoryManager.getInventory.getTotalItems}`,
-            sub: slots !== undefined ? `of ${slots} slots` : undefined
-        });
-    }
-
-    // Captions are short because the box heading already says "time taken", and
-    // the long form shrinks to nothing in a quarter-width column.
-    const rows: [string, string][] = [];
-
-    if (meta.timeTakenToProcessOrConstruct !== undefined) {
-        rows.push([
-            meta.isOfferSent ? 'To construct' : 'To process',
-            formatDuration(meta.timeTakenToProcessOrConstruct)
-        ]);
-    }
-
-    if (meta.timeTakenToCounterOffer !== undefined) {
-        rows.push(['To counter', formatDuration(meta.timeTakenToCounterOffer)]);
-    }
-
-    rows.push(['To complete', formatDuration(meta.timeTakenToComplete)]);
-
-    boxes.push({ label: 'TIME TAKEN', rows: rows.slice(-2) });
-
-    // One row only: four columns is the grid the tiles already establish.
-    return boxes.slice(0, 4);
+    return collectStatReadings(bot, meta).map(boxFromReading);
 }
 
 /** Resolve icons with a bounded number of concurrent fetches. */
@@ -800,6 +780,10 @@ export interface TradeCardOptions {
     maxItemsPerSide?: number;
     /** Defaults to on. */
     showQualityBorders?: boolean;
+    /** The partner's Steam persona name, drawn in the card's header strip. */
+    partnerName?: string;
+    /** The partner's Steam avatar URL, clipped to a circle beside the name. */
+    partnerAvatarUrl?: string;
 }
 
 export interface TradeCardMeta {
@@ -812,6 +796,49 @@ export interface TradeCardMeta {
      * when the figure is meaningless for this trade (an offer we sent).
      */
     net?: { scrap: number; keyRate: number } | null;
+}
+
+/**
+ * The partner's header strip: a circular avatar (when one loads) beside the
+ * persona name. A dead avatar URL draws the name alone — the same tolerance
+ * the emoji font already has, so a missing picture never costs the card.
+ */
+function drawProfileHeader(
+    ctx: SKRSContext2D,
+    avatar: Image | null,
+    name: string | undefined,
+    cardWidth: number
+): void {
+    const cy = PAD + PROFILE_HEIGHT / 2;
+    const cx = PAD + AVATAR_SIZE / 2;
+
+    if (avatar) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, AVATAR_SIZE / 2, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(avatar, PAD, cy - AVATAR_SIZE / 2, AVATAR_SIZE, AVATAR_SIZE);
+        ctx.restore();
+
+        // A hairline ring, so the circle still has an edge on light theme.
+        ctx.strokeStyle = CARD_BORDER;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, AVATAR_SIZE / 2 - 1, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
+    if (!name) {
+        return;
+    }
+
+    const gap = avatar ? AVATAR_SIZE + PROFILE_GAP : 0;
+    const size = px(26);
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = VALUE_COLOR;
+    ctx.font = `${size}px ${FONT_SEMIBOLD}`;
+    ctx.textAlign = 'left';
+    ctx.fillText(fitText(ctx, name, FONT_SEMIBOLD, size, cardWidth - PAD - gap), PAD + gap, cy + px(9));
 }
 
 /**
@@ -853,6 +880,9 @@ export default async function renderTradeCard(
             resolveIcons(ourTiles, accountName, 6),
             resolveIcons(theirTiles, accountName, 6)
         ]);
+        // One small picture, loaded after the tile fans (which run under their
+        // own concurrency cap); a slow avatar must not hold the card up.
+        const avatar = options.partnerAvatarUrl ? await loadAvatar(options.partnerAvatarUrl) : null;
 
         // Both of the next two need a Bot wired up far enough to answer for its
         // own state; the render must survive a caller that only has an offer.
@@ -888,9 +918,14 @@ export default async function renderTradeCard(
         // known once the card's own width is.
         const statGrid = statLayout(statPanelBox(cardWidth).width, stats.length);
         const statsHeight = stats.length > 0 ? BAND_GAP + DIVIDER_HEIGHT + BAND_GAP + statGrid.height : 0;
-        // No partner name up here: it is the first line of the message the card
-        // is attached to.
-        const contentY = PAD;
+        // The header is the card's only place the partner appears when the card
+        // itself is absent, so the name stays even when the avatar fails.
+        const name = options.partnerName;
+        const profileName = name ? name.replace(/[*_`~|>]/g, '').trim() : undefined;
+        // A dead avatar URL costs the *picture* alone, never the card, so the
+        // strip still stands (name on its own) when loadAvatar returns null.
+        const showProfile = Boolean(profileName) || avatar !== null;
+        const contentY = PAD + (showProfile ? PROFILE_HEIGHT : 0);
         const height = contentY + tileRowsHeight + pricesHeight + statsHeight + PAD;
 
         const canvas = createCanvas(cardWidth, height);
@@ -910,6 +945,10 @@ export default async function renderTradeCard(
         ctx.lineWidth = 2;
         roundedRect(ctx, 1, 1, cardWidth - 2, height - 2, CARD_RADIUS - 1);
         ctx.stroke();
+
+        if (showProfile) {
+            drawProfileHeader(ctx, avatar, profileName, cardWidth);
+        }
 
         const ourValue = value?.our ? new Currencies(value.our).toString() : '';
         const theirValue = value?.their ? new Currencies(value.their).toString() : '';

@@ -129,6 +129,42 @@ async function download(sku: string): Promise<Image | null> {
 }
 
 /**
+ * A partner's Steam avatar, rasterized for the card's header strip. Unlike the
+ * tiles this deliberately shares no `isValidPng` gate — an avatar may be any
+ * `image/*` payload, not just a PNG, and the pricedb homepage guard that exists
+ * for tiles does not apply. Returns null on any failure, so a dead or slow URL
+ * costs the picture alone rather than the card.
+ */
+export async function loadAvatar(url: string): Promise<Image | null> {
+    try {
+        const response = await axios({
+            method: 'GET',
+            url,
+            responseType: 'arraybuffer',
+            timeout: FETCH_TIMEOUT,
+            maxRedirects: 5,
+            maxContentLength: MAX_DOWNLOAD_BYTES,
+            headers: { 'User-Agent': 'TF2AutobotCritTF@' + process.env.BOT_VERSION }
+        });
+
+        const contentType = response.headers['content-type'] as string | undefined;
+        if (!contentType || !contentType.toLowerCase().startsWith('image/')) {
+            return null;
+        }
+
+        const buffer = Buffer.from(response.data as ArrayBuffer);
+        if (buffer.length === 0) {
+            return null;
+        }
+
+        return await loadImage(buffer);
+    } catch (err) {
+        log.debug('Could not load the partner avatar for the trade card: ', err);
+        return null;
+    }
+}
+
+/**
  * Resolve a sku to a TILE_SIZE square icon, or null when no usable art exists.
  *
  * Lookup order: memory → negative cache → disk → network. Successful downloads

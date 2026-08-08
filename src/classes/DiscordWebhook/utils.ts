@@ -6,10 +6,10 @@ import { AxiosError } from 'axios';
 import { ErrorFiltered } from '@tf2autobot/filter-axios-error';
 import { apiRequest } from '../../lib/apiRequest';
 
-export function getPartnerDetails(offer: TradeOffer, bot: Bot): Promise<{ personaName: string; avatarFull: any }> {
+export function getPartnerDetails(offer: TradeOffer, bot: Bot): Promise<{ personaName: string; avatarFull: string }> {
     return new Promise(resolve => {
-        const defaultImage =
-            'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/72/72f78b4c8cc1f62323f8a33f6d53e27db57c2252_full.jpg'; //default "?" image
+        const defaultImage = //default "?" image
+            'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/72/72f78b4c8cc1f62323f8a33f6d53e27db57c2252_full.jpg';
         if (offer.state === TradeOfferManager.ETradeOfferState['Active']) {
             offer.getUserDetails((err, me, them) => {
                 if (err) {
@@ -22,7 +22,9 @@ export function getPartnerDetails(offer: TradeOffer, bot: Bot): Promise<{ person
                     log.info('Partner Avatar and Name retrieved. Applying...');
                     resolve({
                         personaName: them.personaName,
-                        avatarFull: them.avatarFull
+                        // The steamcommunity wrapper types these accessors `void`
+                        // though they return a URL string at runtime.
+                        avatarFull: them.avatarFull as unknown as string
                     });
                 }
             });
@@ -38,7 +40,7 @@ export function getPartnerDetails(offer: TradeOffer, bot: Bot): Promise<{ person
                     log.info('Partner Avatar and Name retrieved. Applying...');
                     resolve({
                         personaName: user.name,
-                        avatarFull: user.getAvatarURL('full')
+                        avatarFull: user.getAvatarURL('full') as unknown as string
                     });
                 }
             });

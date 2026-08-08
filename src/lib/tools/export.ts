@@ -6,7 +6,13 @@ import stats from './stats';
 import { timeNow, convertTime, uptime } from './time';
 import valueDiff, { ValueDiff } from './valueDiff';
 import listItems from './summarizeItems';
-import summarize, { summarizeToChat, getNetOverpay, isNetOverpayRelevant, stockChangeText } from './summarizeOffer';
+import summarize, {
+    summarizeToChat,
+    getNetOverpay,
+    isNetOverpayRelevant,
+    stockChangeText,
+    pureEmoji
+} from './summarizeOffer';
 import profit from './profit';
 import itemStats from './itemStats';
 import testPriceKey from './testPriceKey';
@@ -27,6 +33,7 @@ export {
     getNetOverpay,
     isNetOverpayRelevant,
     stockChangeText,
+    pureEmoji,
     uptime,
     convertTime,
     profit,

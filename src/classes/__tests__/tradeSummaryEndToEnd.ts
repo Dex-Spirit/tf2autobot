@@ -308,12 +308,17 @@ e2e('produces a Components V2 multipart payload with the card attached', async (
 
     expect(detail.type).toBe(10);
     expect(detail.content).toContain('💬 **Offer message:** "thanks man!"');
-    // Attributes named in the detail block, badged on the card, and flattened
-    // onto one line with the markdown stripped.
-    expect(detail.content).toContain('🔶 Item 378  🎃 Spells: Exorcism  🎰 Parts: Kills  ✨ Sheen: Manndarin');
-    expect(detail.content).not.toContain('_Item 378_');
-    // Autokeys and item prices are drawn on the card, so neither is here.
-    expect(detail.content).not.toContain('🔑');
+    // A small trade leaves the budget room to name the flagged items in full,
+    // so the old `listItems` block replaces the count and high-value lines —
+    // verbatim, markdown and all (its `@` field splitter is stripped).
+    expect(detail.content).toContain('🔶`_HIGH_VALUE_ITEMS`');
+    expect(detail.content).toContain('🎃 Spells: Exorcism');
+    expect(detail.content).toContain('_Item 378_');
+    // Prices never repeat in the text when the card rendered — they already
+    // live on the card's PRICES section. The verbose listItems reuses only its
+    // flag/high-value naming; key-rate and autokeys similarly stay on the card.
+    expect(detail.content).not.toContain('📜 **Item prices**');
+    expect(detail.content).not.toContain('🔑 Key rate');
     expect(detail.content).not.toContain('#7788990011');
 
     expect(div4.type).toBe(14);
@@ -394,12 +399,86 @@ e2e('omits the media gallery and falls back to plain JSON when tradeCard.enable 
     // No card, no attachment — so no media gallery component at all, but the
     // item links and detail still carry the same information as text.
     expect(container.components.some(c => c.type === 12)).toBe(false);
+    // The status text folds into the existing detail child, never a new one.
+    expect(container.components.length).toBeLessThanOrEqual(10);
 
     const theirBlock = container.components.find((c): c is TextDisplay => c.type === 10 && c.content.startsWith('📥'));
     expect(theirBlock?.content).toContain('Item 5021');
 
     const ourBlock = container.components.find((c): c is TextDisplay => c.type === 10 && c.content.startsWith('📤'));
     expect(ourBlock?.content).toContain('Item 378');
+
+    // Without the card, the bot's status and the priced items fall back to the
+    // detail text, drawn from the same readings the card would have used.
+    const detail = container.components.find(
+        (c): c is TextDisplay => c.type === 10 && c.content.includes('💬 **Offer message:**')
+    );
+    expect(detail?.content).toContain('🔑 Key rate:');
+    expect(detail?.content).toContain('💰 Pure stock:');
+    expect(detail?.content).toContain('🎒 Total items:');
+    expect(detail?.content).toContain('⏱ **Time taken:**');
+    expect(detail?.content).toContain('📜 **Item prices**');
+});
+
+e2e('renders pure as its emoji token when showPureInEmoji is on', async () => {
+    requests.length = 0;
+
+    const bot = makeBot();
+    // Pure keys become the custom emoji on the card and in the item list alike.
+    bot.options.tradeSummary.showPureInEmoji = true;
+
+    await sendTradeSummary(makeOffer(), emptyAccepted(), bot, 4200, 3200, undefined, false, false);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const payload = /name="payload_json"\r\n\r\n([\s\S]*?)\r\n--/.exec(requests[0].body.toString('utf8'));
+    const webhook = JSON.parse(payload[1]) as Webhook;
+    const container = webhook.components[0] as Container;
+
+    const theirBlock = container.components.find((c): c is TextDisplay => c.type === 10 && c.content.startsWith('📥'));
+    // Keys sort first on their side, so the first link's text is the emoji.
+    expect(theirBlock?.content).toContain('[<:tf2key:813050393793658930>](https://pricedb.io/item/5021;6)');
+});
+
+e2e('keeps the verbose message within the text budget', async () => {
+    requests.length = 0;
+
+    const bot = makeBot();
+    bot.options.discordWebhook.tradeSummary.tradeCard.enable = false;
+    bot.options.tradeSummary.showPureInEmoji = true;
+
+    // 30 distinct skus a side (none collapsing to pure) so the item links work
+    // at their widest; the card is absent, so the status text joins the detail.
+    const many = (offset: number): Record<string, number> =>
+        Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`${1000 + offset + i};6`, 1]));
+
+    const offer = makeOffer();
+    const readable = offer as unknown as { data: (key: string) => unknown };
+    const original = readable.data.bind(readable);
+    const multi = { ...(original('dict') as object), our: many(0), their: many(1000) };
+    readable.data = (key: string) => (key === 'dict' ? multi : original(key));
+
+    await sendTradeSummary(offer, emptyAccepted(), bot, 4200, 3200, 2600, false, false);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // No card means no attachment, so the body is plain JSON rather than multipart.
+    expect(requests[0]?.contentType).toContain('application/json');
+    const webhook = JSON.parse(requests[0].body.toString('utf8')) as Webhook;
+    const container = webhook.components[0] as Container;
+    const texts = container.components.filter((c): c is TextDisplay => c.type === 10);
+
+    // The status text landed inside the detail child (card absent).
+    expect(container.components.length).toBeLessThanOrEqual(10);
+    const detail = texts.find(c => c.content.includes('📜 **Item prices**'));
+    expect(detail?.content).toContain('Key rate:');
+
+    const total = texts.reduce((n, c) => n + c.content.length, 0);
+    expect(total).toBeLessThanOrEqual(4000);
+
+    // Degradation collapses to "+N more" rather than a mid-markdown cut.
+    texts.forEach(c => {
+        expect(c.content).not.toMatch(/\[[^\]]*$/);
+        expect(c.content).not.toMatch(/\]\([^)]*$/);
+    });
 });
 
 describe('buildItemLinkBlocks', () => {
