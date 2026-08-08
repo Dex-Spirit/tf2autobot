@@ -571,6 +571,11 @@ export const DEFAULTS: JsonOptions = {
                 itemSkus: [],
                 tradeValueInRef: 0,
                 withEscrow: true
+            },
+            tradeCard: {
+                enable: true,
+                showQualityBorders: true,
+                maxItemsPerSide: 8
             }
         },
         declinedTrade: {
@@ -1743,6 +1748,14 @@ interface TradeSummaryDW extends OnlyEnable {
     url?: string[];
     misc?: MiscTradeSummary;
     mentionOwner?: MentionOwner;
+    tradeCard?: TradeCard;
+}
+
+interface TradeCard extends OnlyEnable {
+    /** Outline each tile in its TF2 quality colour. */
+    showQualityBorders?: boolean;
+    /** Tiles drawn per side before the rest collapse into a "+N more" chip. */
+    maxItemsPerSide?: number;
 }
 
 interface DeclinedTradeDW extends OnlyEnable {

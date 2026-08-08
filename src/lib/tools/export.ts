@@ -6,7 +6,7 @@ import stats from './stats';
 import { timeNow, convertTime, uptime } from './time';
 import valueDiff, { ValueDiff } from './valueDiff';
 import listItems from './summarizeItems';
-import summarize, { summarizeToChat } from './summarizeOffer';
+import summarize, { summarizeToChat, getNetOverpay, isNetOverpayRelevant, stockChangeText } from './summarizeOffer';
 import profit from './profit';
 import itemStats from './itemStats';
 import testPriceKey from './testPriceKey';
@@ -24,6 +24,9 @@ export {
     listItems,
     summarize,
     summarizeToChat,
+    getNetOverpay,
+    isNetOverpayRelevant,
+    stockChangeText,
     uptime,
     convertTime,
     profit,

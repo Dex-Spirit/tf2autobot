@@ -1719,9 +1719,27 @@ export const optionsSchema: jsonschema.Schema = {
                             },
                             required: ['enable', 'itemSkus', 'tradeValueInRef'],
                             additionalProperties: false
+                        },
+                        tradeCard: {
+                            type: 'object',
+                            properties: {
+                                enable: {
+                                    type: 'boolean'
+                                },
+                                showQualityBorders: {
+                                    type: 'boolean'
+                                },
+                                maxItemsPerSide: {
+                                    type: 'number',
+                                    minimum: 1,
+                                    maximum: 8
+                                }
+                            },
+                            required: ['enable', 'showQualityBorders', 'maxItemsPerSide'],
+                            additionalProperties: false
                         }
                     },
-                    required: ['enable', 'url', 'misc', 'mentionOwner'],
+                    required: ['enable', 'url', 'misc', 'mentionOwner', 'tradeCard'],
                     additionalProperties: false
                 },
                 declinedTrade: {

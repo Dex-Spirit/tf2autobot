@@ -584,6 +584,11 @@ async function calculateProfitData(offer: i.TradeOffer, bot: Bot): Promise<void>
             }
         }
 
+        // The entries themselves, not just the aggregate: the Discord trade summary
+        // reports realised profit per item, which needs each sale's own cost basis
+        // and purchase timestamp.
+        offer.data('removedFifoEntries', removedEntriesBySku);
+
         // Store profit data in offer (overpay removed - FIFO diff values capture all buy/sell differences)
         offer.data('tradeProfit', {
             rawProfit: {
