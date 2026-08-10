@@ -235,7 +235,7 @@ e2e('produces a Components V2 multipart payload with the card attached', async (
     // No embeds at all — the IS_COMPONENTS_V2 flag disables them entirely.
     expect(webhook.embeds).toBeUndefined();
     expect(webhook.flags).toBe(1 << 15);
-    expect(webhook.allowed_mentions).toEqual({ parse: ['users', 'roles'] });
+    expect(webhook.allowed_mentions).toEqual({ parse: [], users: ['111222333'] });
 
     // isMention (high value) is true and ownerID is set, so a mention block
     // leads the message, ahead of the container.

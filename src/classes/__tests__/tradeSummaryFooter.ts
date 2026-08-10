@@ -1,4 +1,4 @@
-import { buildDetailBlock, ProfitData } from '../DiscordWebhook/sendTradeSummary';
+import { buildAllowedMentions, buildDetailBlock, escapeMarkdown, ProfitData } from '../DiscordWebhook/sendTradeSummary';
 
 const OFFER_MESSAGE_LABEL = '💬 **Offer message:**';
 
@@ -147,5 +147,22 @@ describe('buildDetailBlock', () => {
         expect(lines[1]).toContain('🟨 invalid 1');
         expect(lines[2]).toContain('🔶');
         expect(lines[3]).toContain('📈');
+    });
+});
+
+describe('trade-summary safety helpers', () => {
+    it('allows mentions only for configured owners', () => {
+        expect(buildAllowedMentions(['111222333', '444555666'])).toEqual({
+            parse: [],
+            users: ['111222333', '444555666']
+        });
+    });
+
+    it('escapes every Markdown character that can break a persona-name link', () => {
+        const escaped = escapeMarkdown('[name] (test) \\ *bold* _italic_ ~tilde~ `code` |pipe| > quote');
+
+        expect(escaped).toContain('\\[name\\] \\(test\\)');
+        expect(escaped).toContain('\\\\');
+        expect(escaped).toContain('\\*bold\\* \\_italic\\_ \\~tilde\\~ \\`code\\` \\|pipe\\| \\> quote');
     });
 });

@@ -8,7 +8,7 @@ import log from '../../lib/logger';
 import * as t from '../../lib/tools/export';
 import Bot from '../Bot';
 import { sendToAdmin } from '../MyHandler/offer/accepted/processAccepted';
-import type { FIFOEntry } from '../InventoryCostBasis';
+import { calculateFifoProfit, getFifoCostBasis, type FIFOEntry } from '../InventoryCostBasis';
 import type { TradeCardMeta, TradeCardOptions } from './tradeCard';
 // A direct import, unlike ./tradeCard below: offerFacts pulls in no native
 // canvas binding, so it cannot be the thing that costs us the summary.
@@ -263,7 +263,7 @@ export default async function sendTradeSummary(
         avatar_url: optDW.avatarURL || botInfo.avatarURL,
         flags: COMPONENTS_V2_FLAG,
         components: topLevel,
-        allowed_mentions: { parse: ['users', 'roles'] }
+        allowed_mentions: buildAllowedMentions(optDW.ownerID)
     };
 
     const attachment: WebhookAttachment | undefined = card ? { name: attachmentName, buffer: card } : undefined;
@@ -343,9 +343,14 @@ function buildMention(
     return matchesSku || matchesValue ? ping : '';
 }
 
-/** A Steam persona name can contain markdown metacharacters; escaped so one bad name cannot break the header's bold/link formatting. */
-function escapeMarkdown(text: string): string {
-    return text.replace(/([*_~`|>])/g, '\\$1');
+/** Restrict pings in component text to the configured webhook owners. */
+export function buildAllowedMentions(ownerIDs: string[]): NonNullable<Webhook['allowed_mentions']> {
+    return { parse: [], users: ownerIDs };
+}
+
+/** A Steam persona name is interpolated as Markdown link text, so escape its complete link-text syntax. */
+export function escapeMarkdown(text: string): string {
+    return text.replace(/([\\\\\[\]()*_~`|>])/g, '\\$1');
 }
 
 interface LinkedEntry {
@@ -811,18 +816,15 @@ function collectItemProfits(offer: TradeOffer, bot: Bot): ProfitData {
                 return;
             }
 
-            // FIFO buy price, with distributed overpay/underpay folded in.
-            const buyPrice = new Currencies({
-                keys: fifoEntry.costKeys + fifoEntry.diffKeys,
-                metal: fifoEntry.costMetal + fifoEntry.diffMetal
-            });
+            const buyPrice = new Currencies(getFifoCostBasis(fifoEntry));
             const sellPrice = new Currencies({ keys: fallbackSell.keys, metal: fallbackSell.metal });
             const keyRateMetal = bot.pricelist.getKeyPrice.metal;
 
             // One signed scrap total, split by toCurrencies afterwards: deriving both
             // parts from one value keeps their signs consistent, unlike a raw
             // `new Currencies({keys, metal})`, which can print "4 keys, -20.94 ref".
-            const profitScrap = sellPrice.toValue(keyRateMetal) - buyPrice.toValue(keyRateMetal);
+            const profit = calculateFifoProfit(fallbackSell, fifoEntry);
+            const profitScrap = new Currencies(profit).toValue(keyRateMetal);
 
             itemProfits.push({
                 name: itemName,
