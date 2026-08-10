@@ -229,7 +229,7 @@ export default class MyHandler extends Handler {
 
     onReady(): void {
         log.info(
-            `TF2Autobot v${process.env.BOT_VERSION} is ready | ${pluralize(
+            `PriceDB Autobot ${process.env.BOT_VERSION_LABEL} is ready | ${pluralize(
                 'item',
                 this.bot.pricelist.getLength,
                 true

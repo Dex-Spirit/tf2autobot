@@ -29,7 +29,7 @@ export default function sendFailedPriceUpdate(
                         : 'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/3d/3dba19679c4a689b9d24fa300856cbf3d948d631_full.jpg'
                 },
                 footer: {
-                    text: `v${process.env.BOT_VERSION}`
+                    text: `${process.env.BOT_VERSION_LABEL}`
                 },
                 title: '',
                 description: `Error: "${err.message}"\ndata: ${JSON.stringify(data, null, 4)}`,

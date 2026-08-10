@@ -780,7 +780,7 @@ export default class Bot {
 
                 this.messageAdmins(
                     'version',
-                    `⚠️ Update available! Current: v${process.env.BOT_VERSION}, Latest: v${latestVersion}.` +
+                    `⚠️ Update available! Current: ${process.env.BOT_VERSION_LABEL}, Latest: PDB-${latestVersion}.` +
                         `\n\n📰 Check discord (https://pricedb.io/discord) for release notes` +
                         (updateMessage ? `\n\n💬 Update message: ${updateMessage}` : ''),
                     []

@@ -156,7 +156,7 @@ export default async function sendTradeSummary(
     const keyRateMetal = bot.pricelist.getKeyPrice.metal;
     const profitData = collectItemProfits(offer, bot);
 
-    const identity = `#${offer.id} • ${offer.partner.toString()} • v${process.env.BOT_VERSION}`;
+    const identity = `#${offer.id} • ${offer.partner.toString()} • ${process.env.BOT_VERSION_LABEL}`;
 
     // ── Body ──────────────────────────────────────────────────────────────────
     // Components V2: one ordered array, text and image interleaved freely, every

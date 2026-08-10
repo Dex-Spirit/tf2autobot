@@ -437,7 +437,7 @@ export default class StatusCommands {
     versionCommand(steamID: SteamID): void {
         this.bot.sendMessage(
             steamID,
-            `Currently running TF2Autobot@v${process.env.BOT_VERSION}. Checking for a new version...`
+            `Currently running PriceDB Autobot ${process.env.BOT_VERSION_LABEL}. Checking for a new version...`
         );
 
         this.bot.checkForUpdates
@@ -447,7 +447,7 @@ export default class StatusCommands {
                 } else if (this.bot.lastNotifiedVersion === latestVersion) {
                     this.bot.sendMessage(
                         steamID,
-                        `⚠️ Update available! Current: v${process.env.BOT_VERSION}, Latest: v${latestVersion}.` +
+                        `⚠️ Update available! Current: ${process.env.BOT_VERSION_LABEL}, Latest: PDB-${latestVersion}.` +
                             `\n\n📰 Check discord (https://pricedb.io/discord) for release notes` +
                             (updateMessage ? `\n\n💬 Update message: ${updateMessage}` : '')
                     );
