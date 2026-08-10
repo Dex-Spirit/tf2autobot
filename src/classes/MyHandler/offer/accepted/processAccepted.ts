@@ -7,7 +7,7 @@ import { KeyPrices } from '../../../Pricelist';
 import log from '../../../../lib/logger';
 import * as t from '../../../../lib/tools/export';
 import { sendTradeSummary } from '../../../DiscordWebhook/export';
-import { FIFOEntry } from '../../../InventoryCostBasis';
+import { calculateFifoProfit, FIFOEntry } from '../../../InventoryCostBasis';
 import { JournalTfBoughtItem, JournalTfSoldItem } from '../../../JournalTfManager';
 
 export default async function processAccepted(
@@ -575,11 +575,13 @@ async function calculateProfitData(offer: i.TradeOffer, bot: Bot): Promise<void>
                 // Calculate raw profit from FIFO cost basis
                 // Raw profit = pricelist sell - pricelist buy + diff (realizes buy-side overpay/underpay)
                 for (const entry of result.entries) {
-                    const itemRawProfitKeys = pricelistSellKeys - entry.costKeys + entry.diffKeys;
-                    const itemRawProfitMetal = pricelistSellMetal - entry.costMetal + entry.diffMetal;
+                    const itemRawProfit = calculateFifoProfit(
+                        { keys: pricelistSellKeys, metal: pricelistSellMetal },
+                        entry
+                    );
 
-                    rawProfitKeys += itemRawProfitKeys;
-                    rawProfitMetal += itemRawProfitMetal;
+                    rawProfitKeys += itemRawProfit.keys;
+                    rawProfitMetal += itemRawProfit.metal;
                 }
             }
         }
