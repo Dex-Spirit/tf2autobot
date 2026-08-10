@@ -80,5 +80,9 @@ export interface Webhook {
     components?: Component[];
     /** Must be `1 << 15` to send `components`. */
     flags?: number;
-    allowed_mentions?: { parse?: ('users' | 'roles' | 'everyone')[] };
+    allowed_mentions?: {
+        parse?: ('users' | 'roles' | 'everyone')[];
+        /** Explicit user IDs that may be mentioned when `parse` is empty. */
+        users?: string[];
+    };
 }
