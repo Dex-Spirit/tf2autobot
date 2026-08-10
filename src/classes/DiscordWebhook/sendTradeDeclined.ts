@@ -149,8 +149,8 @@ export default async function sendTradeDeclined(
                     }
                 ],
                 footer: {
-                    text: `#${offer.id} • ${offer.partner.toString()} • ${t.timeNow(bot.options).time} • v${
-                        process.env.BOT_VERSION
+                    text: `#${offer.id} • ${offer.partner.toString()} • ${t.timeNow(bot.options).time} • ${
+                        process.env.BOT_VERSION_LABEL
                     }`
                 }
             }

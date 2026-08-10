@@ -21,10 +21,11 @@ const e2e = outDir ? it : it.skip;
 
 const ACCOUNT = '__tradesummary_e2e__';
 
-// app.ts sets this at startup and never runs under jest, so the footer's identity
-// line would otherwise read "vundefined" — confusing in a live probe.
+// app.ts sets these at startup and never runs under jest, so the footer's identity
+// line would otherwise read "undefined" — confusing in a live probe.
 // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-member-access
 process.env.BOT_VERSION = (require('../../../package.json') as { version: string }).version;
+process.env.BOT_VERSION_LABEL = `PDB-${process.env.BOT_VERSION}`;
 
 let server: http.Server;
 let url: string;
