@@ -1748,7 +1748,12 @@ export default class Trades {
                             if (!restarting) {
                                 return sendAlert('failedPM2', this.bot);
                             }
-                            this.bot.sendMessage(steamID, '🙇‍♂️ Sorry! Something went wrong. I am restarting myself...');
+                            if (this.bot.friends.isFriend(steamID)) {
+                                this.bot.sendMessage(
+                                    steamID,
+                                    '🙇‍♂️ Sorry! Something went wrong. I am restarting myself...'
+                                );
+                            }
                         })
                         .catch(err => {
                             log.warn('Error occurred while trying to restart: ', err);
@@ -1771,7 +1776,12 @@ export default class Trades {
                                 );
                             }
                             this.bot.messageAdmins(`🔄 Restarting...`, []);
-                            this.bot.sendMessage(steamID, '🙇‍♂️ Sorry! Something went wrong. I am restarting myself...');
+                            if (this.bot.friends.isFriend(steamID)) {
+                                this.bot.sendMessage(
+                                    steamID,
+                                    '🙇‍♂️ Sorry! Something went wrong. I am restarting myself...'
+                                );
+                            }
                         })
                         .catch(err => {
                             log.warn('Error occurred while trying to restart: ', err);

@@ -1960,7 +1960,7 @@ export default class MyHandler extends Handler {
                     )}`
                 );
 
-                if (opt.offerReceived.sendPreAcceptMessage.enable) {
+                if (!this.opt.globalDisable.offerMessages && opt.offerReceived.sendPreAcceptMessage.enable) {
                     const preAcceptMessage = opt.customMessage.accepted.automatic;
 
                     MyHandler.sendPreAcceptedMessage(
@@ -2161,7 +2161,11 @@ export default class MyHandler extends Handler {
             `accepting. Summary:\n${JSON.stringify(summarize(offer, this.bot, 'summary-accepting', false), null, 4)}`
         );
 
-        if (opt.offerReceived.sendPreAcceptMessage.enable && this.bot.friends.isFriend(offer.partner)) {
+        if (
+            !this.opt.globalDisable.offerMessages &&
+            opt.offerReceived.sendPreAcceptMessage.enable &&
+            this.bot.friends.isFriend(offer.partner)
+        ) {
             const preAcceptMessage = opt.customMessage.accepted.automatic;
 
             MyHandler.sendPreAcceptedMessage(
@@ -2228,7 +2232,7 @@ export default class MyHandler extends Handler {
                     const notifyOpt = this.opt.steamChat.notifyTradePartner;
 
                     if (offer.state === TradeOfferManager.ETradeOfferState['Accepted']) {
-                        if (notifyOpt.onSuccessAccepted) accepted(offer, this.bot);
+                        if (notifyOpt.onSuccessAccepted && !this.opt.globalDisable.offerMessages) accepted(offer, this.bot);
 
                         if (offer.data('donation')) {
                             this.bot.messageAdmins('✅ Success! Your donation has been sent and received!', []);
@@ -2236,12 +2240,16 @@ export default class MyHandler extends Handler {
                             this.bot.messageAdmins('✅ Success! Your premium purchase has been sent and received!', []);
                         }
                     } else if (offer.state === TradeOfferManager.ETradeOfferState['InEscrow']) {
-                        if (notifyOpt.onSuccessAcceptedEscrow) acceptEscrow(offer, this.bot);
+                        if (notifyOpt.onSuccessAcceptedEscrow && !this.opt.globalDisable.offerMessages) {
+                            acceptEscrow(offer, this.bot);
+                        }
                     } else if (offer.state === TradeOfferManager.ETradeOfferState['Declined']) {
-                        if (notifyOpt.onDeclined) declined(offer, this.bot);
+                        if (notifyOpt.onDeclined && !this.opt.globalDisable.offerMessages) declined(offer, this.bot);
                         offer.data('isDeclined', true);
                     } else if (offer.state === TradeOfferManager.ETradeOfferState['Canceled']) {
-                        if (notifyOpt.onCancelled) cancelled(offer, oldState, this.bot);
+                        if (notifyOpt.onCancelled && !this.opt.globalDisable.offerMessages) {
+                            cancelled(offer, oldState, this.bot);
+                        }
 
                         if (offer.data('canceledByUser') === true) {
                             // do nothing
@@ -2252,7 +2260,7 @@ export default class MyHandler extends Handler {
                         }
                         MyHandler.removePolldataKeys(offer);
                     } else if (offer.state === TradeOfferManager.ETradeOfferState['InvalidItems']) {
-                        if (notifyOpt.onTradedAway) invalid(offer, this.bot);
+                        if (notifyOpt.onTradedAway && !this.opt.globalDisable.offerMessages) invalid(offer, this.bot);
                         offer.data('isInvalid', true);
                         MyHandler.removePolldataKeys(offer);
                     }

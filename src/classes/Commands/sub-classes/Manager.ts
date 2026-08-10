@@ -475,19 +475,21 @@ export default class ManagerCommands {
         const removeFriends = async (total: number, friendsToRemove: string[], blockedFriends: string[]) => {
             for (const steamid of friendsToRemove) {
                 if (!blockedFriends.includes(steamid)) {
-                    const getFriend = this.bot.friends.getFriend(steamid);
+                    if (!this.bot.options.globalDisable.unfriendMessage) {
+                        const getFriend = this.bot.friends.getFriend(steamid);
 
-                    this.bot.sendMessage(
-                        steamid,
-                        this.bot.options.customMessage.clearFriends
-                            ? this.bot.options.customMessage.clearFriends.replace(
-                                  /%name%/g,
-                                  getFriend ? getFriend.player_name : steamid
-                              )
-                            : `/quote Hey ${
-                                  getFriend ? getFriend.player_name : steamid
-                              }! My owner has performed friend list clearance. Please feel free to add me again if you want to trade at a later time!`
-                    );
+                        this.bot.sendMessage(
+                            steamid,
+                            this.bot.options.customMessage.clearFriends
+                                ? this.bot.options.customMessage.clearFriends.replace(
+                                      /%name%/g,
+                                      getFriend ? getFriend.player_name : steamid
+                                  )
+                                : `/quote Hey ${
+                                      getFriend ? getFriend.player_name : steamid
+                                  }! My owner has performed friend list clearance. Please feel free to add me again if you want to trade at a later time!`
+                        );
+                    }
                 } else {
                     log.info(`Blocked user ${steamid} has been successfully unfriended!`);
                 }
