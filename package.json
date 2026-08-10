@@ -1,10 +1,11 @@
 {
     "name": "tf2autobot-pricedb-io",
-    "version": "5.17.2",
+    "version": "5.18.0-local",
     "description": "Fully automated TF2 trading bot advertising on www.backpack.tf using prices from www.pricedb.io, Originally made by Nicklason.",
     "main": "dist/app.js",
     "scripts": {
         "release": "np --no-cleanup --no-publish",
+        "prebuild": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
         "build": "tsc -p .",
         "pretest": "npm run lint",
         "test": "jest",
