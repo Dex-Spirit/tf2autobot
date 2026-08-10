@@ -186,88 +186,19 @@ export function collectStatReadings(bot: Bot, meta: StatMeta): StatReading[] {
     const tSum = bot.options.tradeSummary;
     const customText = tSum?.customText;
     const misc = bot.options.discordWebhook?.tradeSummary?.misc;
-
-    const readings: StatReading[] = [];
-
-    if (misc?.showKeyRate) {
-        const keyPrices = bot.pricelist.getKeyPrices;
-        const autokeys = bot.handler.autokeys;
-        const status = autokeys.getOverallStatus;
-
-        readings.push({
-            kind: 'keyRate',
-            label: customText?.keyRate?.discordWebhook || STAT_LABELS.keyRate,
-            value: `${keyPrices.buy.metal.toString()} / ${keyPrices.sell.metal.toString()} ref`,
-            sub:
-                keyPrices.src === 'manual'
-                    ? 'manual'
-                    : bot.pricelist.isUseCustomPricer
-                    ? 'custom-pricer'
-                    : 'PriceDB.IO',
-            // Spelled out: "AK" means nothing without the options file to hand.
-            note: autokeys.isEnabled
-                ? autokeys.getActiveStatus
-                    ? `Autokeys ${status.isBankingKeys ? 'bank' : status.isBuyingKeys ? 'buy' : 'sell'}`
-                    : 'Autokeys idle'
-                : undefined
-        });
-    }
-
-    if (misc?.showPureStock) {
-        const pure = currPure(bot);
-        // A slash triple rather than the chat command's "380 ref, 26 rec, 11
-        // scrap", which is twice as wide as a quarter-width box.
-        const refined = Currencies.toRefined(pure.refTotalInScrap);
-
-        readings.push({
-            kind: 'pureStock',
-            label: customText?.pureStock?.discordWebhook || STAT_LABELS.pureStock,
-            value: `${pure.key} ${pluralize('key', pure.key)}`,
-            sub: `${refined} ref (${pure.ref}/${pure.rec}/${pure.scrap})`
-        });
-    }
-
-    if (misc?.showInventory) {
-        const slots = bot.tf2.backpackSlots;
-        readings.push({
-            kind: 'totalItems',
-            label: customText?.totalItems?.discordWebhook || STAT_LABELS.totalItems,
-            value: `${bot.inventoryManager.getInventory.getTotalItems}`,
-            sub: slots !== undefined ? `of ${slots} slots` : undefined
-        });
-    }
-
-    // Captions are short because the box heading already says "time taken", and
-    // the long form shrinks to nothing in a quarter-width column. `detailed` on
-    // narrows the row set; the formatters let a single row read inline.
-    const detailed = tSum?.showDetailedTimeTaken !== false;
-    const showMs = tSum?.showTimeTakenInMS === true;
-    const rows: [string, string, number][] = [];
-
-    if (detailed) {
-        if (meta.timeTakenToProcessOrConstruct !== undefined) {
-            rows.push([
-                meta.isOfferSent ? 'To construct' : 'To process',
-                formatDuration(meta.timeTakenToProcessOrConstruct),
-                meta.timeTakenToProcessOrConstruct
-            ]);
-        }
-
-        if (meta.timeTakenToCounterOffer !== undefined) {
-            rows.push(['To counter', formatDuration(meta.timeTakenToCounterOffer), meta.timeTakenToCounterOffer]);
-        }
-    }
-
-    rows.push(['To complete', formatDuration(meta.timeTakenToComplete), meta.timeTakenToComplete]);
-
-    readings.push({
-        kind: 'timeTaken',
-        label: customText?.timeTaken?.discordWebhook || STAT_LABELS.timeTaken,
-        rows,
-        detailed,
-        showMs
-    });
-
-    // One row only: four columns is the grid the tiles already establish.
-    return readings.slice(0, 4);
+    const readings: StatReading[] = [timeReading(meta, customText, tSum)];
+    const keyRate = misc?.showKeyRate ? keyRateReading(bot, customText) : undefined;
+    const pureStock = misc?.showPureStock ? pureStockReading(bot, customText) : undefined;
+    const inventory = misc?.showInventory ? inventoryReading(bot, customText) : undefined;
+    return [keyRate, pureStock, inventory, readings[0]].filter(Boolean) as StatReading[];
 }
+
+function keyRateReading(bot: Bot, customText: any): StatReading {
+    const keyPrices = bot.pricelist.getKeyPrices;
+    const autokeys = bot.handler.autokeys;
+    return { kind: 'keyRate', label: customText?.keyRate?.discordWebhook || STAT_LABELS.keyRate,
+        value: `${keyPrices.buy.metal.toString()} / ${keyPrices.sell.metal.toString()} ref`, sub: keyPrices.src === 'manual' ? 'manual' : bot.pricelist.isUseCustomPricer ? 'custom-pricer' : 'PriceDB.IO', note: autokeys.isEnabled ? autokeys.getActiveStatus ? `Autokeys ${autokeys.getOverallStatus.isBankingKeys ? 'bank' : autokeys.getOverallStatus.isBuyingKeys ? 'buy' : 'sell'}` : 'Autokeys idle' : undefined };
+}
+function pureStockReading(bot: Bot, customText: any): StatReading { const pure = currPure(bot); return { kind: 'pureStock', label: customText?.pureStock?.discordWebhook || STAT_LABELS.pureStock, value: `${pure.key} ${pluralize('key', pure.key)}`, sub: `${Currencies.toRefined(pure.refTotalInScrap)} ref (${pure.ref}/${pure.rec}/${pure.scrap})` }; }
+function inventoryReading(bot: Bot, customText: any): StatReading { const slots = bot.tf2.backpackSlots; return { kind: 'totalItems', label: customText?.totalItems?.discordWebhook || STAT_LABELS.totalItems, value: `${bot.inventoryManager.getInventory.getTotalItems}`, sub: slots !== undefined ? `of ${slots} slots` : undefined }; }
+function timeReading(meta: StatMeta, customText: any, tSum: any): StatReading { const detailed = tSum?.showDetailedTimeTaken !== false; const rows: [string, string, number][] = []; if (detailed && meta.timeTakenToProcessOrConstruct !== undefined) rows.push([meta.isOfferSent ? 'To construct' : 'To process', formatDuration(meta.timeTakenToProcessOrConstruct), meta.timeTakenToProcessOrConstruct]); if (detailed && meta.timeTakenToCounterOffer !== undefined) rows.push(['To counter', formatDuration(meta.timeTakenToCounterOffer), meta.timeTakenToCounterOffer]); rows.push(['To complete', formatDuration(meta.timeTakenToComplete), meta.timeTakenToComplete]); return { kind: 'timeTaken', label: customText?.timeTaken?.discordWebhook || STAT_LABELS.timeTaken, rows, detailed, showMs: tSum?.showTimeTakenInMS === true }; }

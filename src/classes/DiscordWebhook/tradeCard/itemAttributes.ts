@@ -128,7 +128,7 @@ function hexFromValue(value: number): string | undefined {
  * value, so no lookup table is needed to draw the swatch — only to name it.
  */
 function paintHex(partialSku: string): string | undefined {
-    return hexFromValue(parseInt(partialSku.replace('p', ''), 10));
+    return hexFromValue(Number.parseInt(partialSku.replace('p', ''), 10));
 }
 
 /**
@@ -137,7 +137,7 @@ function paintHex(partialSku: string): string | undefined {
  * value too large to be an index is treated as a colour.
  */
 function footprintColor(partialSku: string): string {
-    const value = parseInt(partialSku.split('-')[2], 10);
+    const value = Number.parseInt(partialSku.split('-')[2], 10);
     return (value > 0xffff && hexFromValue(value)) || SPELL_FALLBACK;
 }
 
@@ -181,7 +181,7 @@ export function collectScanned(items: Record<string, ItemAttributes> | undefined
 
     for (const priceKey of Object.keys(items)) {
         const attributes = items[priceKey];
-        const spells = keysOf(attributes.s).sort();
+        const spells = keysOf(attributes.s).sort((a, b) => a.localeCompare(b));
         const paint = keysOf(attributes.p)[0];
 
         const entry: ScannedAttributes = {

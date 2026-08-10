@@ -1,4 +1,4 @@
-import path from 'path';
+import path from 'node:path';
 import { TradeOffer, ItemsDict, ItemsValue, OurTheirItemsDict, HighValueOutput } from '@tf2autobot/tradeoffer-manager';
 import Currencies from '@tf2autobot/tf2-currencies';
 import SKU from '@tf2autobot/tf2-sku';
@@ -711,7 +711,9 @@ const EMOJI_GLYPHS = new Set([
  * `customText.*.discordWebhook` labels the card draws.
  */
 export function cardLabel(raw: string, fallback: string): string {
-    const kept = Array.from(raw.replace(/[*_`~|[\]()>]/g, ''))
+    const markdown = new Set(['*', '_', '`', '~', '|', '[', ']', '(', ')', '>']);
+    const kept = Array.from(raw)
+        .filter(ch => !markdown.has(ch))
         .filter(ch => {
             const cp = ch.codePointAt(0) ?? 0;
             return cp <= 0xff || EMOJI_GLYPHS.has(cp);

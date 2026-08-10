@@ -350,7 +350,8 @@ export function buildAllowedMentions(ownerIDs: string[]): NonNullable<Webhook['a
 
 /** A Steam persona name is interpolated as Markdown link text, so escape its complete link-text syntax. */
 export function escapeMarkdown(text: string): string {
-    return text.replace(/([\\\\\[\]()*_~`|>])/g, '\\$1');
+    const escapable = new Set(['\\', '[', ']', '(', ')', '*', '_', '~', '`', '|', '>']);
+    return Array.from(text, char => (escapable.has(char) ? `\\${char}` : char)).join('');
 }
 
 interface LinkedEntry {
@@ -613,44 +614,27 @@ export function buildDetailBlock(
  * this is the single text-home of prices when there is no card to draw them.
  */
 export function buildStatusBlock(readings: StatReading[], prices: PricedItem[]): string {
-    const lines: string[] = [];
-
-    for (const r of readings) {
-        switch (r.kind) {
-            case 'keyRate':
-                lines.push(`${r.label} ${r.value}  ·  ${r.sub}`);
-                break;
-            case 'pureStock':
-                lines.push(`${r.label} ${r.value}  ·  ${r.sub}`);
-                break;
-            case 'totalItems':
-                lines.push(`${r.label} ${r.value}${r.sub ? ` ${r.sub}` : ''}`);
-                break;
-            case 'timeTaken':
-                if (r.detailed) {
-                    lines.push(r.label);
-                    for (const [caption, figure, ms] of r.rows) {
-                        lines.push(`- ${caption}: ${figure}${r.showMs ? ` (${ms} ms)` : ''}`);
-                    }
-                } else {
-                    const [, figure, ms] = r.rows[0];
-                    lines.push(`${r.label} ${figure}${r.showMs ? ` (${ms} ms)` : ''}`);
-                }
-                break;
-        }
-    }
-
-    if (prices.length > 0) {
-        lines.push('📜 **Item prices**');
-        // The card's own row shaper decides how many fit and what the overflow
-        // row says, so the two renderings cannot disagree on the cut. Its
-        // overflow row carries an empty right half; that one goes out bare.
-        for (const [left, right] of priceRows(prices)) {
-            lines.push(right ? `- **${clamp(left, NAME_CAP)}** ${right}` : left);
-        }
-    }
-
+    const lines = readings.flatMap(statusLines);
+    appendPriceLines(lines, prices);
     return lines.join('\n');
+}
+
+function statusLines(reading: StatReading): string[] {
+    if (reading.kind === 'keyRate' || reading.kind === 'pureStock') return [`${reading.label} ${reading.value}  ·  ${reading.sub}`];
+    if (reading.kind === 'totalItems') return [`${reading.label} ${reading.value}${reading.sub ? ` ${reading.sub}` : ''}`];
+    if (!reading.detailed) {
+        const [, figure, ms] = reading.rows[0];
+        return [`${reading.label} ${figure}${timeMsSuffix(reading.showMs, ms)}`];
+    }
+    return [reading.label, ...reading.rows.map(([caption, figure, ms]) => `- ${caption}: ${figure}${timeMsSuffix(reading.showMs, ms)}`)];
+}
+
+function timeMsSuffix(showMs: boolean, ms: number): string { return showMs ? ` (${ms} ms)` : ''; }
+
+function appendPriceLines(lines: string[], prices: PricedItem[]): void {
+    if (prices.length === 0) return;
+    lines.push('📜 **Item prices**');
+    priceRows(prices).forEach(([left, right]) => lines.push(right ? `- **${clamp(left, NAME_CAP)}** ${right}` : left));
 }
 
 /**
@@ -698,7 +682,7 @@ function profitLines(data: ProfitData, keyRateMetal: number): string[] {
     } else if (data.profits.length > 0) {
         // Too many to list: report the total and the single biggest earner.
         const total = data.profits.reduce((sum, p) => sum + p.profitScrap, 0);
-        const best = data.profits.reduce((a, b) => (b.profitScrap > a.profitScrap ? b : a));
+        const best = data.profits.reduce((a, b) => (b.profitScrap > a.profitScrap ? b : a), data.profits[0]);
 
         lines.push(
             `${profitIndicator(total)} ${Currencies.toCurrencies(total, keyRateMetal).toString()} across ` +
@@ -711,7 +695,8 @@ function profitLines(data: ProfitData, keyRateMetal: number): string[] {
         const named = data.missing.slice(0, 2).map(name => clamp(name, NAME_CAP));
         const rest = data.missing.length - named.length;
 
-        lines.push(`⚠️ no cost data: ${named.join(', ')}${rest > 0 ? ` +${rest} more` : ''}`);
+        const overflow = rest > 0 ? ` +${rest} more` : '';
+        lines.push(`⚠️ no cost data: ${named.join(', ')}${overflow}`);
     }
 
     return lines;
@@ -762,7 +747,7 @@ function collectItemProfits(offer: TradeOffer, bot: Bot): ProfitData {
     const empty: ProfitData = { profits: [], missing: [] };
 
     const dict = offer.data('dict') as ItemsDict;
-    if (!dict || !dict.our || Object.keys(dict.our).length === 0) {
+    if (!dict?.our || Object.keys(dict.our).length === 0) {
         return empty;
     }
 

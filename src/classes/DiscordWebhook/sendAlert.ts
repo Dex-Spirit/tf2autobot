@@ -238,6 +238,7 @@ export default function sendAlert(
 
     const botInfo = bot.handler.getBotInfo;
     const optDW = bot.options.discordWebhook;
+    const footerPrefix = footer ? `${footer} • ` : '';
 
     const sendAlertWebhook: Webhook = {
         username: optDW.displayName || botInfo.name,
@@ -277,7 +278,7 @@ export default function sendAlert(
                 description: description,
                 color: color,
                 footer: {
-                    text: `${footer ? `${footer} • ` : ''}${timeNow(bot.options).time} • ${process.env.BOT_VERSION_LABEL}`
+                    text: `${footerPrefix}${timeNow(bot.options).time} • ${process.env.BOT_VERSION_LABEL}`
                 }
             }
         ]

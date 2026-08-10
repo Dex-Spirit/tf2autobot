@@ -64,12 +64,14 @@ export function stockChangeText(bot: Bot, priceKey: string, which: string, type:
     const inProcess = ['review-admin', 'summary-accepting', 'summary-countering'].includes(type);
 
     const ours = which === 'our';
-    const oldStock = accepted ? (ours ? currentStock + amount : currentStock - amount) : currentStock;
-    const newStock = inProcess ? (ours ? currentStock - amount : currentStock + amount) : currentStock;
+    const direction = ours ? 1 : -1;
+    const oldStock = accepted ? currentStock + direction * amount : currentStock;
+    const newStock = inProcess ? currentStock - direction * amount : currentStock;
 
     const limit = entry ? `/${entry.max}` : '';
 
-    return `${accepted || inProcess ? `${oldStock} → ` : ''}${newStock}${limit}`;
+    const transition = accepted || inProcess ? `${oldStock} → ` : '';
+    return `${transition}${newStock}${limit}`;
 }
 
 export function summarizeToChat(

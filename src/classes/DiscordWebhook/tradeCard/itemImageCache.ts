@@ -1,5 +1,5 @@
-import { promises as fs } from 'fs';
-import path from 'path';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import axios from 'axios';
 import { createCanvas, loadImage, Image } from '@napi-rs/canvas';
 import log from '../../../lib/logger';
@@ -35,7 +35,7 @@ const inFlight = new Map<string, Promise<Image | null>>();
  * data problem we cannot see from here.
  */
 export function isValidPng(buffer: Buffer, contentType: string | undefined): boolean {
-    if (!contentType || !contentType.toLowerCase().startsWith('image/')) {
+    if (!contentType?.toLowerCase().startsWith('image/')) {
         return false;
     }
 
@@ -90,6 +90,7 @@ async function readFromDisk(sku: string, accountName: string): Promise<Image | n
         const buffer = await fs.readFile(path.join(cacheDir(accountName), cacheFileName(sku)));
         return await loadImage(buffer);
     } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') log.debug(`Could not read cached item image for ${sku}: `, err);
         return null;
     }
 }
