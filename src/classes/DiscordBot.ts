@@ -10,8 +10,10 @@ import {
     ApplicationCommandType,
     TextChannel,
     MessageFlagsBitField,
-    MessageCreateOptions
+    MessageCreateOptions,
+    ButtonInteraction
 } from 'discord.js';
+import { randomUUID } from 'node:crypto';
 import log from '../lib/logger';
 import Options from './Options';
 import Bot from './Bot';
@@ -19,8 +21,19 @@ import SteamID from 'steamid';
 import { uptime } from '../lib/tools/time';
 import { CurrentPure, stock as pureStock } from '../lib/tools/pure';
 import renderPureStockCard from './DiscordWebhook/tradeCard/renderPureStockCard';
-import { renderStockCards } from './DiscordWebhook/tradeCard/renderStockCards';
+import { renderStockCardPage, stockCardPageCount } from './DiscordWebhook/tradeCard/renderStockCards';
 import type { StockCardEntry } from './DiscordWebhook/tradeCard/renderStockCards';
+
+const STOCK_PAGER_TIMEOUT_MS = 15 * 60 * 1000;
+
+interface StockPagerSession {
+    requesterId: Snowflake;
+    entries: StockCardEntry[];
+    title: string;
+    currentPage: number;
+    totalPages: number;
+    message: Message;
+}
 
 export default class DiscordBot {
     readonly client: Client;
@@ -28,6 +41,8 @@ export default class DiscordBot {
     private prefix = '!';
 
     private MAX_MESSAGE_LENGTH = 2000 - 2; // some characters are reserved
+
+    private readonly stockPagers = new Map<string, StockPagerSession>();
 
     constructor(private options: Options, private bot: Bot) {
         this.client = new Client({
@@ -60,6 +75,11 @@ export default class DiscordBot {
 
             /* eslint-disable */
             this.client.on('interactionCreate', async interaction => {
+                if (interaction.isButton() && interaction.customId.startsWith('stock-page:')) {
+                    await this.handleStockPager(interaction);
+                    return;
+                }
+
                 if (!interaction.isChatInputCommand()) return;
 
                 if (interaction.commandName === 'uptime') {
@@ -190,14 +210,149 @@ export default class DiscordBot {
         fallback: string,
         afterText?: string
     ): Promise<void> {
-        const cards = await renderStockCards(entries, this.bot.options.steamAccountName, title);
-        if (cards === null) {
+        const totalPages = stockCardPageCount(entries);
+        const card = await renderStockCardPage(entries, this.bot.options.steamAccountName, title, 0);
+        if (card === null) {
             this.sendAnswer(origMessage, fallback);
             return;
         }
 
-        const sent = await this.sendCardGallery(origMessage, cards, 'stock', fallback);
-        if (sent && afterText) this.sendAnswer(origMessage, afterText);
+        try {
+            const token = randomUUID();
+            const session = {
+                requesterId: origMessage.author.id,
+                entries,
+                title,
+                currentPage: 0,
+                totalPages
+            } as Omit<StockPagerSession, 'message'>;
+            const message = await (origMessage.channel as TextChannel).send({
+                flags: MessageFlagsBitField.Flags.IsComponentsV2,
+                components: this.stockPagerComponents(session, token),
+                files: [{ attachment: card, name: 'stock-page.png' }]
+            });
+
+            if (totalPages > 1) {
+                this.stockPagers.set(token, { ...session, message });
+                setTimeout(() => void this.expireStockPager(token), STOCK_PAGER_TIMEOUT_MS);
+            }
+            if (afterText) this.sendAnswer(origMessage, afterText);
+        } catch (err) {
+            log.warn('Failed to send Discord stock card; sending text fallback:', err);
+            this.sendAnswer(origMessage, fallback);
+        }
+    }
+
+    private stockPagerComponents(
+        session: Pick<StockPagerSession, 'currentPage' | 'totalPages'>,
+        token?: string,
+        expired = false
+    ): MessageCreateOptions['components'] {
+        const container = {
+            type: 17,
+            accent_color: Number(this.bot.options.discordWebhook.embedColor),
+            components: [{ type: 12, items: [{ media: { url: 'attachment://stock-page.png' } }] }]
+        };
+
+        if (expired) {
+            return [
+                container,
+                {
+                    type: 1,
+                    components: [
+                        {
+                            type: 2,
+                            style: 2,
+                            label: 'Results expired — rerun !stock',
+                            custom_id: 'stock-page:expired',
+                            disabled: true
+                        }
+                    ]
+                }
+            ] as unknown as MessageCreateOptions['components'];
+        }
+
+        if (session.totalPages <= 1 || token === undefined)
+            return [container] as unknown as MessageCreateOptions['components'];
+
+        return [
+            container,
+            {
+                type: 1,
+                components: [
+                    {
+                        type: 2,
+                        style: 2,
+                        label: '◀ Previous',
+                        custom_id: `stock-page:${token}:previous`,
+                        disabled: session.currentPage === 0
+                    },
+                    {
+                        type: 2,
+                        style: 2,
+                        label: `Page ${session.currentPage + 1} / ${session.totalPages}`,
+                        custom_id: `stock-page:${token}:current`,
+                        disabled: true
+                    },
+                    {
+                        type: 2,
+                        style: 2,
+                        label: 'Next ▶',
+                        custom_id: `stock-page:${token}:next`,
+                        disabled: session.currentPage === session.totalPages - 1
+                    }
+                ]
+            }
+        ] as unknown as MessageCreateOptions['components'];
+    }
+
+    private async handleStockPager(interaction: ButtonInteraction): Promise<void> {
+        const [, token, direction] = interaction.customId.split(':');
+        const session = this.stockPagers.get(token);
+        if (session === undefined || direction === undefined || direction === 'current') {
+            await interaction.reply({
+                content: 'This stock result has expired. Please rerun !stock.',
+                flags: MessageFlagsBitField.Flags.Ephemeral
+            });
+            return;
+        }
+
+        if (interaction.user.id !== session.requesterId && !this.isDiscordAdmin(interaction.user.id)) {
+            await interaction.reply({
+                content: 'Only the requester or a bot admin can browse this result.',
+                flags: MessageFlagsBitField.Flags.Ephemeral
+            });
+            return;
+        }
+
+        const page = direction === 'next' ? session.currentPage + 1 : session.currentPage - 1;
+        if (page < 0 || page >= session.totalPages) {
+            await interaction.deferUpdate();
+            return;
+        }
+
+        await interaction.deferUpdate();
+        const card = await renderStockCardPage(session.entries, this.bot.options.steamAccountName, session.title, page);
+        if (card === null) return;
+
+        session.currentPage = page;
+        await session.message.edit({
+            components: this.stockPagerComponents(session, token),
+            attachments: [],
+            files: [{ attachment: card, name: 'stock-page.png' }]
+        });
+    }
+
+    private async expireStockPager(token: string): Promise<void> {
+        const session = this.stockPagers.get(token);
+        if (session === undefined) return;
+
+        this.stockPagers.delete(token);
+        try {
+            await session.message.edit({ components: this.stockPagerComponents(session, undefined, true) });
+        } catch (err) {
+            log.debug('Failed to expire Discord stock pager:', err);
+        }
     }
 
     private async sendCardGallery(

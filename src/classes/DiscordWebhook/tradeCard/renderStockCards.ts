@@ -36,63 +36,79 @@ export function stockCardPages(entries: StockCardEntry[]): StockCardEntry[][] {
     );
 }
 
+export function stockCardPageCount(entries: StockCardEntry[]): number {
+    return Math.ceil(entries.length / PAGE_SIZE);
+}
+
+export async function renderStockCardPage(
+    entries: StockCardEntry[],
+    accountName: string,
+    title: string,
+    pageIndex: number
+): Promise<Buffer | null> {
+    const pages = stockCardPages(entries);
+    const page = pages[pageIndex];
+    if (page === undefined) return null;
+
+    try {
+        registerTradeCardFonts();
+        const images = await Promise.all(page.map(entry => getItemIcon(entry.sku, accountName)));
+        const rows = Math.ceil(page.length / COLUMNS);
+        const height = HEADER_HEIGHT + PADDING + TILE_HEIGHT * rows + GAP * Math.max(rows - 1, 0) + PADDING;
+        const canvas = createCanvas(WIDTH, height);
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = CARD_BG;
+        roundedRect(ctx, 0, 0, WIDTH, height, 24);
+        ctx.fill();
+        ctx.strokeStyle = CARD_BORDER;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.font = `26px ${FONT_SEMIBOLD}`;
+        ctx.fillStyle = PILL_TEXT;
+        ctx.textAlign = 'left';
+        ctx.fillText(title.toUpperCase(), PADDING, 43);
+        ctx.font = `18px ${FONT_REGULAR}`;
+        ctx.fillStyle = '#B8BEC9';
+        ctx.textAlign = 'right';
+        ctx.fillText(`PAGE ${pageIndex + 1}/${pages.length} · ${entries.length} ITEMS`, WIDTH - PADDING, 42);
+
+        page.forEach((entry, index) => {
+            const column = index % COLUMNS;
+            const row = Math.floor(index / COLUMNS);
+            const x = PADDING + column * (TILE_WIDTH + GAP);
+            const y = HEADER_HEIGHT + PADDING + row * (TILE_HEIGHT + GAP);
+            roundedRect(ctx, x, y, TILE_WIDTH, TILE_HEIGHT, 16);
+            ctx.fillStyle = TILE_FILL;
+            ctx.fill();
+            ctx.strokeStyle = CARD_BORDER;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            drawIcon(ctx, images[index], x + (TILE_WIDTH - 112) / 2, y + 30, 112);
+            ctx.font = `18px ${FONT_REGULAR}`;
+            ctx.fillStyle = PILL_TEXT;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'alphabetic';
+            ctx.fillText(
+                fitText(ctx, entry.name, FONT_REGULAR, 18, TILE_WIDTH - 24),
+                x + TILE_WIDTH / 2,
+                y + TILE_HEIGHT - 20
+            );
+            drawCountPill(ctx, x, y, TILE_WIDTH, TILE_HEIGHT, entry.amount, 'top');
+        });
+        return canvas.toBuffer('image/png');
+    } catch {
+        return null;
+    }
+}
+
 export async function renderStockCards(
     entries: StockCardEntry[],
     accountName: string,
     title: string
 ): Promise<Buffer[] | null> {
-    try {
-        registerTradeCardFonts();
-        const pages = stockCardPages(entries);
-        const images = await Promise.all(entries.map(entry => getItemIcon(entry.sku, accountName)));
-
-        return pages.map((page, pageIndex) => {
-            const rows = Math.ceil(page.length / COLUMNS);
-            const height = HEADER_HEIGHT + PADDING + TILE_HEIGHT * rows + GAP * Math.max(rows - 1, 0) + PADDING;
-            const canvas = createCanvas(WIDTH, height);
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = CARD_BG;
-            roundedRect(ctx, 0, 0, WIDTH, HEIGHT, 24);
-            ctx.fill();
-            ctx.strokeStyle = CARD_BORDER;
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            ctx.font = `26px ${FONT_SEMIBOLD}`;
-            ctx.fillStyle = PILL_TEXT;
-            ctx.textAlign = 'left';
-            ctx.fillText(title.toUpperCase(), PADDING, 43);
-            ctx.font = `18px ${FONT_REGULAR}`;
-            ctx.fillStyle = '#B8BEC9';
-            ctx.textAlign = 'right';
-            ctx.fillText(`PAGE ${pageIndex + 1}/${pages.length} · ${entries.length} ITEMS`, WIDTH - PADDING, 42);
-
-            page.forEach((entry, index) => {
-                const column = index % COLUMNS;
-                const row = Math.floor(index / COLUMNS);
-                const x = PADDING + column * (TILE_WIDTH + GAP);
-                const y = HEADER_HEIGHT + PADDING + row * (TILE_HEIGHT + GAP);
-                roundedRect(ctx, x, y, TILE_WIDTH, TILE_HEIGHT, 16);
-                ctx.fillStyle = TILE_FILL;
-                ctx.fill();
-                ctx.strokeStyle = CARD_BORDER;
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-                drawIcon(ctx, images[pageIndex * PAGE_SIZE + index], x + (TILE_WIDTH - 112) / 2, y + 30, 112);
-                ctx.font = `18px ${FONT_REGULAR}`;
-                ctx.fillStyle = PILL_TEXT;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'alphabetic';
-                ctx.fillText(
-                    fitText(ctx, entry.name, FONT_REGULAR, 18, TILE_WIDTH - 24),
-                    x + TILE_WIDTH / 2,
-                    y + TILE_HEIGHT - 20
-                );
-                drawCountPill(ctx, x, y, TILE_WIDTH, TILE_HEIGHT, entry.amount, 'top');
-            });
-            return canvas.toBuffer('image/png');
-        });
-    } catch {
-        return null;
-    }
+    const cards = await Promise.all(
+        stockCardPages(entries).map((_, pageIndex) => renderStockCardPage(entries, accountName, title, pageIndex))
+    );
+    return cards.every((card): card is Buffer => card !== null) ? cards : null;
 }
