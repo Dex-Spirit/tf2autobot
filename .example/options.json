@@ -287,8 +287,8 @@
         }
     },
     "details": {
-        "buy": "I am buying your %name% for %price%, I have %current_stock% / %max_stock%.",
-        "sell": "I am selling my %name% for %price%, I am selling %amount_trade%.",
+        "buy": "I am buying your %name% for %price%, I have %current_stock% / %max_stock%. Visit %pricedb_item% to compare!",
+        "sell": "I am selling my %name% for %price%, I am selling %amount_trade%. Visit %pricedb_item% to compare!",
         "showAutokeys": true,
         "showBoldText": {
             "onPrice": false,
