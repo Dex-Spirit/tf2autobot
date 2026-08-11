@@ -32,6 +32,7 @@ interface StockPagerSession {
     title: string;
     currentPage: number;
     totalPages: number;
+    detailsText?: string;
     message: Message;
 }
 
@@ -208,7 +209,7 @@ export default class DiscordBot {
         entries: StockCardEntry[],
         title: string,
         fallback: string,
-        afterText?: string
+        detailsText?: string
     ): Promise<void> {
         const totalPages = stockCardPageCount(entries);
         const card = await renderStockCardPage(entries, this.bot.options.steamAccountName, title, 0);
@@ -224,7 +225,8 @@ export default class DiscordBot {
                 entries,
                 title,
                 currentPage: 0,
-                totalPages
+                totalPages,
+                detailsText
             } as Omit<StockPagerSession, 'message'>;
             const message = await (origMessage.channel as TextChannel).send({
                 flags: MessageFlagsBitField.Flags.IsComponentsV2,
@@ -236,7 +238,6 @@ export default class DiscordBot {
                 this.stockPagers.set(token, { ...session, message });
                 setTimeout(() => void this.expireStockPager(token), STOCK_PAGER_TIMEOUT_MS);
             }
-            if (afterText) this.sendAnswer(origMessage, afterText);
         } catch (err) {
             log.warn('Failed to send Discord stock card; sending text fallback:', err);
             this.sendAnswer(origMessage, fallback);
@@ -244,14 +245,17 @@ export default class DiscordBot {
     }
 
     private stockPagerComponents(
-        session: Pick<StockPagerSession, 'currentPage' | 'totalPages'>,
+        session: Pick<StockPagerSession, 'currentPage' | 'totalPages' | 'detailsText'>,
         token?: string,
         expired = false
     ): MessageCreateOptions['components'] {
         const container = {
             type: 17,
             accent_color: Number(this.bot.options.discordWebhook.embedColor),
-            components: [{ type: 12, items: [{ media: { url: 'attachment://stock-page.png' } }] }]
+            components: [
+                { type: 12, items: [{ media: { url: 'attachment://stock-page.png' } }] },
+                ...(session.detailsText ? [{ type: 10, content: session.detailsText }] : [])
+            ]
         };
 
         if (expired) {

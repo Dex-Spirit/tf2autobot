@@ -172,8 +172,8 @@ export default class MiscCommands {
                         });
                     }
 
-                    const assetIdText = assetids.length > 0 ? '/pre Assetids:\n- ' + assetids.join('\n- ') : '';
-                    reply += assetIdText ? `\n\n${assetIdText.slice(5)}` : '';
+                    const assetIdText = assetids.length > 0 ? 'Assetids:\n- ' + assetids.join('\n- ') : '';
+                    reply += assetIdText ? `\n\n${assetIdText}` : '';
                     if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot) {
                         const entry: StockCardEntry = { sku, name, amount: itemDicts.length };
                         void this.bot.discordBot.sendStockGalleryAnswer(
