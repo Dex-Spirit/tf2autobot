@@ -19,6 +19,8 @@ import SteamID from 'steamid';
 import { uptime } from '../lib/tools/time';
 import { CurrentPure, stock as pureStock } from '../lib/tools/pure';
 import renderPureStockCard from './DiscordWebhook/tradeCard/renderPureStockCard';
+import { renderStockCards } from './DiscordWebhook/tradeCard/renderStockCards';
+import type { StockCardEntry } from './DiscordWebhook/tradeCard/renderStockCards';
 
 export default class DiscordBot {
     readonly client: Client;
@@ -178,23 +180,63 @@ export default class DiscordBot {
             return;
         }
 
-        const components = [
-            {
-                type: 17,
-                accent_color: Number(this.bot.options.discordWebhook.embedColor),
-                components: [{ type: 12, items: [{ media: { url: 'attachment://pure-stock.png' } }] }]
-            }
-        ] as unknown as MessageCreateOptions['components'];
+        await this.sendCardGallery(origMessage, [card], 'pure-stock', fallback);
+    }
 
-        try {
-            await (origMessage.channel as TextChannel).send({
-                flags: MessageFlagsBitField.Flags.IsComponentsV2,
-                components,
-                files: [{ attachment: card, name: 'pure-stock.png' }]
-            });
-        } catch (err) {
-            log.warn('Failed to send Discord pure-stock card; sending text fallback:', err);
+    public async sendStockGalleryAnswer(
+        origMessage: Message,
+        entries: StockCardEntry[],
+        title: string,
+        fallback: string,
+        afterText?: string
+    ): Promise<void> {
+        const cards = await renderStockCards(entries, this.bot.options.steamAccountName, title);
+        if (cards === null) {
             this.sendAnswer(origMessage, fallback);
+            return;
+        }
+
+        const sent = await this.sendCardGallery(origMessage, cards, 'stock', fallback);
+        if (sent && afterText) this.sendAnswer(origMessage, afterText);
+    }
+
+    private async sendCardGallery(
+        origMessage: Message,
+        cards: Buffer[],
+        name: string,
+        fallback: string
+    ): Promise<boolean> {
+        try {
+            for (let offset = 0; offset < cards.length; offset += 10) {
+                const batch = cards.slice(offset, offset + 10);
+                const files = batch.map((card, index) => ({
+                    attachment: card,
+                    name: `${name}-${offset + index + 1}.png`
+                }));
+                const components = [
+                    {
+                        type: 17,
+                        accent_color: Number(this.bot.options.discordWebhook.embedColor),
+                        components: [
+                            {
+                                type: 12,
+                                items: files.map(file => ({ media: { url: `attachment://${file.name}` } }))
+                            }
+                        ]
+                    }
+                ] as unknown as MessageCreateOptions['components'];
+
+                await (origMessage.channel as TextChannel).send({
+                    flags: MessageFlagsBitField.Flags.IsComponentsV2,
+                    components,
+                    files
+                });
+            }
+            return true;
+        } catch (err) {
+            log.warn('Failed to send Discord card gallery; sending text fallback:', err);
+            this.sendAnswer(origMessage, fallback);
+            return false;
         }
     }
 

@@ -1,9 +1,20 @@
-import { createCanvas, Image, SKRSContext2D } from '@napi-rs/canvas';
+import { createCanvas, SKRSContext2D } from '@napi-rs/canvas';
 import Currencies from '@tf2autobot/tf2-currencies';
 
 import { CurrentPure } from '../../../lib/tools/pure';
 import { getItemIcon } from './itemImageCache';
 import { registerTradeCardFonts } from './renderTradeCard';
+import {
+    CARD_BG,
+    CARD_BORDER,
+    drawCountPill,
+    drawIcon,
+    FONT_REGULAR,
+    FONT_SEMIBOLD,
+    PILL_TEXT,
+    roundedRect,
+    TILE_FILL
+} from './cardCanvas';
 
 const WIDTH = 960;
 const HEIGHT = 300;
@@ -16,14 +27,7 @@ const TILE_RADIUS = 16;
 const TOTAL_TOP = TILE_TOP + TILE_HEIGHT + 20;
 const TOTAL_HEIGHT = 44;
 
-const CARD_BG = '#2F3136';
-const CARD_BORDER = 'rgba(255, 255, 255, 0.09)';
-const TILE_FILL = 'rgba(255, 255, 255, 0.06)';
-const PILL_FILL = 'rgba(0, 0, 0, 0.72)';
-const PILL_TEXT = '#FFFFFF';
 const TILE_BORDER = '#FFD700';
-const FONT_SEMIBOLD = 'TradeCardSansSemi';
-const FONT_REGULAR = 'TradeCardSans';
 
 const currencies = [
     { sku: '5021;6', label: 'Keys', getValue: (stock: CurrentPure) => stock.key },
@@ -31,39 +35,6 @@ const currencies = [
     { sku: '5001;6', label: 'Reclaimed', getValue: (stock: CurrentPure) => stock.rec },
     { sku: '5000;6', label: 'Scrap', getValue: (stock: CurrentPure) => stock.scrap }
 ];
-
-function roundedRect(ctx: SKRSContext2D, x: number, y: number, w: number, h: number, radius: number): void {
-    ctx.beginPath();
-    ctx.roundRect(x, y, w, h, radius);
-}
-
-function drawIcon(ctx: SKRSContext2D, icon: Image | null, x: number, y: number, size: number): void {
-    if (icon === null) {
-        return;
-    }
-
-    const scale = Math.min(size / icon.width, size / icon.height);
-    const width = icon.width * scale;
-    const height = icon.height * scale;
-    ctx.drawImage(icon, x + (size - width) / 2, y + (size - height) / 2, width, height);
-}
-
-function drawCountPill(ctx: SKRSContext2D, x: number, y: number, amount: number): void {
-    const label = `x${amount}`;
-    ctx.font = `22px ${FONT_SEMIBOLD}`;
-    const width = ctx.measureText(label).width + 20;
-    const height = 34;
-    const pillX = x + TILE_WIDTH - width - 12;
-    const pillY = y + TILE_HEIGHT - height - 12;
-
-    ctx.fillStyle = PILL_FILL;
-    roundedRect(ctx, pillX, pillY, width, height, height / 2);
-    ctx.fill();
-    ctx.fillStyle = PILL_TEXT;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(label, pillX + width / 2, pillY + height / 2 + 1);
-}
 
 function drawTotal(ctx: SKRSContext2D, stock: CurrentPure): void {
     roundedRect(ctx, PADDING, TOTAL_TOP, WIDTH - PADDING * 2, TOTAL_HEIGHT, TILE_RADIUS);
@@ -118,7 +89,7 @@ export default async function renderPureStockCard(stock: CurrentPure, accountNam
             ctx.stroke();
 
             drawIcon(ctx, icons[index], x + (TILE_WIDTH - 120) / 2, TILE_TOP + 24, 120);
-            drawCountPill(ctx, x, TILE_TOP, currency.getValue(stock));
+            drawCountPill(ctx, x, TILE_TOP, TILE_WIDTH, TILE_HEIGHT, currency.getValue(stock));
         });
         drawTotal(ctx, stock);
 
