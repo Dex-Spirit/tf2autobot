@@ -83,7 +83,9 @@ function drawTotal(ctx: SKRSContext2D, stock: CurrentPure): void {
     ctx.fillStyle = PILL_TEXT;
     ctx.textAlign = 'right';
     ctx.fillText(
-        `${Currencies.toRefined(stock.refTotalInScrap).toFixed(2)} ref`,
+        `${stock.key} ${stock.key === 1 ? 'key' : 'keys'} · ${Currencies.toRefined(stock.refTotalInScrap).toFixed(
+            2
+        )} ref`,
         WIDTH - PADDING - 18,
         TOTAL_TOP + TOTAL_HEIGHT / 2 + 1
     );
