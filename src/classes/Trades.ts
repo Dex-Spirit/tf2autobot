@@ -77,6 +77,9 @@ export default class Trades {
 
         this.itemsInTrade.clear();
         this.reservedItemsByOffer.clear();
+        this.offerExpiryTimers.forEach(timer => clearTimeout(timer));
+        this.offerExpiryTimers.clear();
+        this.expiringOffers.clear();
 
         // Go through all sent / received offers and mark the items as in trade
         const activeCount = activeOrCreatedNeedsConfirmation.length;
@@ -1372,6 +1375,7 @@ export default class Trades {
                         'successfully created' + (status === 'pending' ? '; confirmation required' : '')
                     );
 
+                    this.moveReservationToOfferId(offer);
                     this.scheduleOfferExpiry(offer);
 
                     return resolve(status);
@@ -1970,13 +1974,55 @@ export default class Trades {
 
     private getReservationKey(offer: TradeOffer): string {
         const storedKey = offer.data('_reservationKey') as string | undefined;
+        if (offer.id !== null) {
+            const offerKey = `offer:${offer.id}`;
+            if (storedKey !== offerKey) {
+                this.moveReservationKey(storedKey, offerKey);
+                offer.data('_reservationKey', offerKey);
+            }
+            return offerKey;
+        }
+
         if (storedKey !== undefined) {
             return storedKey;
         }
 
-        const key = offer.id === null ? `pending:${++this.reservationSequence}` : `offer:${offer.id}`;
+        const key = `pending:${++this.reservationSequence}`;
         offer.data('_reservationKey', key);
         return key;
+    }
+
+    private moveReservationToOfferId(offer: TradeOffer): void {
+        if (offer.id !== null) {
+            this.getReservationKey(offer);
+        }
+    }
+
+    private moveReservationKey(previousKey: string | undefined, nextKey: string): void {
+        if (previousKey === undefined || previousKey === nextKey) {
+            return;
+        }
+
+        const offerItems = this.reservedItemsByOffer.get(previousKey);
+        if (offerItems === undefined) {
+            return;
+        }
+
+        let nextOfferItems = this.reservedItemsByOffer.get(nextKey);
+        if (nextOfferItems === undefined) {
+            nextOfferItems = new Set<string>();
+            this.reservedItemsByOffer.set(nextKey, nextOfferItems);
+        }
+
+        offerItems.forEach(assetid => {
+            nextOfferItems.add(assetid);
+            const reservations = this.itemsInTrade.get(assetid);
+            if (reservations !== undefined) {
+                reservations.delete(previousKey);
+                reservations.add(nextKey);
+            }
+        });
+        this.reservedItemsByOffer.delete(previousKey);
     }
 
     private reserveOfferItems(offer: TradeOffer): void {
