@@ -23,7 +23,7 @@ export default class MiscCommands {
 
         this.bot.sendMessage(
             steamID,
-                `Steam: <https://steamcommunity.com/profiles/${botSteamID}>` +
+            `Steam: <https://steamcommunity.com/profiles/${botSteamID}>` +
                 `\nBackpack.tf: <https://backpack.tf/u/${botSteamID}>` +
                 `\nRep.tf: <https://rep.tf/${botSteamID}>` +
                 `\nMannco.store: <https://mannco.store/store/${botSteamID}>` +
@@ -59,6 +59,10 @@ export default class MiscCommands {
             this.bot.sendMessage(steamID, custom ? custom.replace(/%uptime%/g, botUptime) : botUptime);
         } else if (command === 'pure') {
             const pureStock = pure.stock(this.bot);
+            if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot) {
+                void this.bot.discordBot.sendPureStockAnswer(steamID.redirectAnswerTo, pure.currPure(this.bot));
+                return;
+            }
             this.bot.sendMessage(
                 steamID,
                 custom

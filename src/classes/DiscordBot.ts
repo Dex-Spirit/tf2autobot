@@ -8,13 +8,18 @@ import {
     Snowflake,
     ActivityType,
     ApplicationCommandType,
-    TextChannel
+    TextChannel,
+    MessageFlagsBitField,
+    MessageCreateOptions
 } from 'discord.js';
 import log from '../lib/logger';
 import Options from './Options';
 import Bot from './Bot';
 import SteamID from 'steamid';
 import { uptime } from '../lib/tools/time';
+import { CurrentPure, stock as pureStock } from '../lib/tools/pure';
+import Currencies from '@tf2autobot/tf2-currencies';
+import renderPureStockCard from './DiscordWebhook/tradeCard/renderPureStockCard';
 
 export default class DiscordBot {
     readonly client: Client;
@@ -163,6 +168,42 @@ export default class DiscordBot {
             this.sendMessage(origMessage, partialMessage);
         } else {
             this.sendMessage(origMessage, formattedMessage); // TODO: normal parsing of markup things
+        }
+    }
+
+    public async sendPureStockAnswer(origMessage: Message, stock: CurrentPure): Promise<void> {
+        const fallback = `💰 I have ${pureStock(this.bot).join(' and ')} in my inventory.`;
+        const card = await renderPureStockCard(stock, this.bot.options.steamAccountName);
+        if (card === null) {
+            this.sendAnswer(origMessage, fallback);
+            return;
+        }
+
+        const components = [
+            {
+                type: 17,
+                accent_color: Number(this.bot.options.discordWebhook.embedColor),
+                components: [
+                    { type: 10, content: '## 💰 Pure Stock' },
+                    { type: 14, divider: true, spacing: 1 },
+                    { type: 12, items: [{ media: { url: 'attachment://pure-stock.png' } }] },
+                    {
+                        type: 10,
+                        content: `Metal total: **${Currencies.toRefined(stock.refTotalInScrap).toFixed(2)} ref**`
+                    }
+                ]
+            }
+        ] as unknown as MessageCreateOptions['components'];
+
+        try {
+            await (origMessage.channel as TextChannel).send({
+                flags: MessageFlagsBitField.Flags.IsComponentsV2,
+                components,
+                files: [{ attachment: card, name: 'pure-stock.png' }]
+            });
+        } catch (err) {
+            log.warn('Failed to send Discord pure-stock card; sending text fallback:', err);
+            this.sendAnswer(origMessage, fallback);
         }
     }
 
