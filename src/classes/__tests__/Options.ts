@@ -190,26 +190,26 @@ test('loads custom pricer options', () => {
     expect(result.customPricerUrl).toEqual('https://custom-pricer.example.com');
 });
 
-test('validates skipItemsInTrade timeoutMinutes', () => {
+test('validates skipItemsInTrade cancelOfferAfterMinutes', () => {
     let result = Options.loadOptions({ steamAccountName: 'abc123' });
-    expect(result.miscSettings.skipItemsInTrade.timeoutMinutes).toBe(0);
+    expect(result.miscSettings.skipItemsInTrade.cancelOfferAfterMinutes).toBe(0);
 
     result = Options.loadOptions({
         steamAccountName: 'abc123',
-        miscSettings: { skipItemsInTrade: { timeoutMinutes: 2 } }
+        miscSettings: { skipItemsInTrade: { cancelOfferAfterMinutes: 2 } }
     });
-    expect(result.miscSettings.skipItemsInTrade.timeoutMinutes).toBe(2);
+    expect(result.miscSettings.skipItemsInTrade.cancelOfferAfterMinutes).toBe(2);
 
     const optionsPath = Options.getOptionsPath('abc123');
     const invalidValues = [-1, 1.5, 'two'];
-    invalidValues.forEach(timeoutMinutes => {
+    invalidValues.forEach(cancelOfferAfterMinutes => {
         const invalidOptions = {
             ...defaultOptions,
             miscSettings: {
                 ...defaultOptions.miscSettings,
                 skipItemsInTrade: {
                     ...defaultOptions.miscSettings.skipItemsInTrade,
-                    timeoutMinutes
+                    cancelOfferAfterMinutes
                 }
             }
         };
