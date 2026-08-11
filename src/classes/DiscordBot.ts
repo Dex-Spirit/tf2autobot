@@ -18,7 +18,6 @@ import Bot from './Bot';
 import SteamID from 'steamid';
 import { uptime } from '../lib/tools/time';
 import { CurrentPure, stock as pureStock } from '../lib/tools/pure';
-import Currencies from '@tf2autobot/tf2-currencies';
 import renderPureStockCard from './DiscordWebhook/tradeCard/renderPureStockCard';
 
 export default class DiscordBot {
@@ -179,20 +178,11 @@ export default class DiscordBot {
             return;
         }
 
-        const stockText = `💰 I have ${pureStock(this.bot).join(' and ')} in my inventory.`;
         const components = [
             {
                 type: 17,
                 accent_color: Number(this.bot.options.discordWebhook.embedColor),
-                components: [
-                    { type: 12, items: [{ media: { url: 'attachment://pure-stock.png' } }] },
-                    {
-                        type: 10,
-                        content: `${stockText}\nMetal total: **${Currencies.toRefined(stock.refTotalInScrap).toFixed(
-                            2
-                        )} ref**`
-                    }
-                ]
+                components: [{ type: 12, items: [{ media: { url: 'attachment://pure-stock.png' } }] }]
             }
         ] as unknown as MessageCreateOptions['components'];
 
