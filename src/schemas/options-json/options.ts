@@ -493,7 +493,18 @@ export const optionsSchema: jsonschema.Schema = {
                     additionalProperties: false
                 },
                 skipItemsInTrade: {
-                    $ref: '#/definitions/only-enable'
+                    type: 'object',
+                    properties: {
+                        enable: {
+                            type: 'boolean'
+                        },
+                        timeoutMinutes: {
+                            type: 'integer',
+                            minimum: 0
+                        }
+                    },
+                    required: ['enable', 'timeoutMinutes'],
+                    additionalProperties: false
                 },
                 weaponsAsCurrency: {
                     type: 'object',

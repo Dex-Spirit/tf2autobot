@@ -59,7 +59,8 @@ export const DEFAULTS: JsonOptions = {
             useSeparateKeyRates: false
         },
         skipItemsInTrade: {
-            enable: true
+            enable: true,
+            timeoutMinutes: 0
         },
         weaponsAsCurrency: {
             enable: true,
@@ -1217,6 +1218,10 @@ interface OnlyEnable {
     enable?: boolean;
 }
 
+interface SkipItemsInTrade extends OnlyEnable {
+    timeoutMinutes?: number;
+}
+
 // ------------ Global Disable ------------
 
 interface GlobalDisable {
@@ -1304,7 +1309,7 @@ interface MiscSettings {
     counterOffer?: Counteroffer;
     addFriends?: OnlyEnable;
     sendGroupInvite?: OnlyEnable;
-    skipItemsInTrade?: OnlyEnable;
+    skipItemsInTrade?: SkipItemsInTrade;
     weaponsAsCurrency?: WeaponsAsCurrency;
     itemsOnBothSides?: OnlyEnable;
     checkUses?: CheckUses;
