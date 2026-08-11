@@ -29,7 +29,6 @@ const COLUMNS = 4;
 const TILE_WIDTH = (WIDTH - PADDING * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
 const TILE_HEIGHT = 176;
 const HEADER_HEIGHT = 70;
-const HEIGHT = HEADER_HEIGHT + PADDING + TILE_HEIGHT * 5 + GAP * 4 + PADDING;
 
 export function stockCardPages(entries: StockCardEntry[]): StockCardEntry[][] {
     return Array.from({ length: Math.ceil(entries.length / PAGE_SIZE) }, (_, page) =>
@@ -48,7 +47,9 @@ export async function renderStockCards(
         const images = await Promise.all(entries.map(entry => getItemIcon(entry.sku, accountName)));
 
         return pages.map((page, pageIndex) => {
-            const canvas = createCanvas(WIDTH, HEIGHT);
+            const rows = Math.ceil(page.length / COLUMNS);
+            const height = HEADER_HEIGHT + PADDING + TILE_HEIGHT * rows + GAP * Math.max(rows - 1, 0) + PADDING;
+            const canvas = createCanvas(WIDTH, height);
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = CARD_BG;
             roundedRect(ctx, 0, 0, WIDTH, HEIGHT, 24);
@@ -77,7 +78,7 @@ export async function renderStockCards(
                 ctx.strokeStyle = CARD_BORDER;
                 ctx.lineWidth = 1.5;
                 ctx.stroke();
-                drawIcon(ctx, images[pageIndex * PAGE_SIZE + index], x + (TILE_WIDTH - 112) / 2, y + 16, 112);
+                drawIcon(ctx, images[pageIndex * PAGE_SIZE + index], x + (TILE_WIDTH - 112) / 2, y + 30, 112);
                 ctx.font = `18px ${FONT_REGULAR}`;
                 ctx.fillStyle = PILL_TEXT;
                 ctx.textAlign = 'center';
@@ -87,7 +88,7 @@ export async function renderStockCards(
                     x + TILE_WIDTH / 2,
                     y + TILE_HEIGHT - 20
                 );
-                drawCountPill(ctx, x, y, TILE_WIDTH, TILE_HEIGHT, entry.amount);
+                drawCountPill(ctx, x, y, TILE_WIDTH, TILE_HEIGHT, entry.amount, 'top');
             });
             return canvas.toBuffer('image/png');
         });

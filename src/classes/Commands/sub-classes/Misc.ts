@@ -172,7 +172,8 @@ export default class MiscCommands {
                         });
                     }
 
-                    reply += assetids.length > 0 ? '\n\nAssetids:\n- ' + assetids.join('\n- ') : '';
+                    const assetIdText = assetids.length > 0 ? '/pre Assetids:\n- ' + assetids.join('\n- ') : '';
+                    reply += assetIdText ? `\n\n${assetIdText.slice(5)}` : '';
                     if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot) {
                         const entry: StockCardEntry = { sku, name, amount: itemDicts.length };
                         void this.bot.discordBot.sendStockGalleryAnswer(
@@ -180,7 +181,7 @@ export default class MiscCommands {
                             [entry],
                             'Item Stock',
                             reply,
-                            reply
+                            assetIdText || undefined
                         );
                         return;
                     }

@@ -35,14 +35,15 @@ export function drawCountPill(
     y: number,
     width: number,
     height: number,
-    amount: number
+    amount: number,
+    position: 'top' | 'bottom' = 'bottom'
 ): void {
     const label = `x${amount}`;
     ctx.font = `22px ${FONT_SEMIBOLD}`;
     const pillWidth = ctx.measureText(label).width + 20;
     const pillHeight = 34;
     const pillX = x + width - pillWidth - 12;
-    const pillY = y + height - pillHeight - 12;
+    const pillY = position === 'top' ? y + 12 : y + height - pillHeight - 12;
 
     ctx.fillStyle = PILL_FILL;
     roundedRect(ctx, pillX, pillY, pillWidth, pillHeight, pillHeight / 2);
