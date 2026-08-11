@@ -2172,14 +2172,20 @@ export default class PricelistManagerCommands {
                 .slice(0, applyLimit)
                 .map(priceKey => {
                     const entry = pricelist[priceKey];
+                    const stock = this.bot.inventoryManager.getInventory.getAmount({
+                        priceKey,
+                        includeNonNormalized: false,
+                        tradableOnly: true
+                    });
                     return {
                         sku: entry.sku,
                         name: entry.name,
-                        amount: this.bot.inventoryManager.getInventory.getAmount({
-                            priceKey,
-                            includeNonNormalized: false,
-                            tradableOnly: true
-                        })
+                        amount: stock,
+                        details: `${stock}/${entry.min}-${entry.max} · ${
+                            entry.intent === 2 ? 'BANK' : entry.intent === 1 ? 'SELL' : 'BUY'
+                        } · ${entry.enabled ? 'ON' : 'OFF'} · ${entry.autoprice ? 'AUTO' : 'MANUAL'} · ${
+                            entry.isPartialPriced ? 'PPU' : 'STD'
+                        }`
                     };
                 });
             await this.bot.discordBot.sendStockGalleryAnswer(
@@ -2189,7 +2195,8 @@ export default class PricelistManagerCommands {
                 list.join('\n'),
                 `**${pluralize('item', listCount, true)} in pricelist**${
                     applyLimit < listCount ? ` · showing ${applyLimit}` : ''
-                }\n📦 Stock · quantity badge\n⚙️ Use \`!get sku=<sku>\` for full settings.`
+                }\n📦 Stock · quantity badge\n⚙️ Use \`!get sku=<sku>\` for full settings.`,
+                8
             );
             PricelistManagerCommands.isSending = false;
             return;
@@ -2286,15 +2293,20 @@ export default class PricelistManagerCommands {
         if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot) {
             const entries: StockCardEntry[] = Object.keys(pricelist)
                 .slice(0, applyLimit)
-                .map(sku => ({
-                    sku,
-                    name: pricelist[sku].name,
-                    amount: this.bot.inventoryManager.getInventory.getAmount({
+                .map(sku => {
+                    const entry = pricelist[sku];
+                    const stock = this.bot.inventoryManager.getInventory.getAmount({
                         priceKey: sku,
                         includeNonNormalized: false,
                         tradableOnly: true
-                    })
-                }));
+                    });
+                    return {
+                        sku,
+                        name: entry.name,
+                        amount: stock,
+                        details: `${stock}/${entry.min}-${entry.max} · PPU`
+                    };
+                });
             await this.bot.discordBot.sendStockGalleryAnswer(
                 steamID.redirectAnswerTo,
                 entries,
@@ -2302,7 +2314,8 @@ export default class PricelistManagerCommands {
                 list.join('\n'),
                 `**${pluralize('item', listCount, true)} with PPU enabled**${
                     applyLimit < listCount ? ` · showing ${applyLimit}` : ''
-                }\n📈 Quantity badges show current tradable stock.`
+                }\n📈 Quantity badges show current tradable stock.`,
+                8
             );
             PricelistManagerCommands.isSending = false;
             return;
@@ -2618,15 +2631,23 @@ export default class PricelistManagerCommands {
 
             const applyLimit = limit === -1 ? listCount : limit;
             if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot) {
-                const entries: StockCardEntry[] = filter.slice(0, applyLimit).map(entry => ({
-                    sku: entry.sku,
-                    name: entry.name,
-                    amount: this.bot.inventoryManager.getInventory.getAmount({
+                const entries: StockCardEntry[] = filter.slice(0, applyLimit).map(entry => {
+                    const stock = this.bot.inventoryManager.getInventory.getAmount({
                         priceKey: entry.id ?? entry.sku,
                         includeNonNormalized: false,
                         tradableOnly: true
-                    })
-                }));
+                    });
+                    return {
+                        sku: entry.sku,
+                        name: entry.name,
+                        amount: stock,
+                        details: `${stock}/${entry.min}-${entry.max} · ${
+                            entry.intent === 2 ? 'BANK' : entry.intent === 1 ? 'SELL' : 'BUY'
+                        } · ${entry.enabled ? 'ON' : 'OFF'} · ${entry.autoprice ? 'AUTO' : 'MANUAL'} · ${
+                            entry.isPartialPriced ? 'PPU' : 'STD'
+                        }`
+                    };
+                });
                 await this.bot.discordBot.sendStockGalleryAnswer(
                     steamID.redirectAnswerTo,
                     entries,
@@ -2634,7 +2655,8 @@ export default class PricelistManagerCommands {
                     list.join('\n'),
                     `**${pluralize('item', filterCount, true)} found**\n🔍 ${display.join(' · ')}${
                         applyLimit < listCount ? ` · showing ${applyLimit}` : ''
-                    }`
+                    }`,
+                    8
                 );
                 PricelistManagerCommands.isSending = false;
                 return;

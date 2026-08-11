@@ -76,16 +76,11 @@ export default class MiscCommands {
             const keyBuyRate = key.buy.toString();
 
             if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot && !custom) {
-                void this.bot.discordBot.sendV2TextAnswer(
+                void this.bot.discordBot.sendRateAnswer(
                     steamID.redirectAnswerTo,
-                    '🔑 Key Rate',
-                    `**Buy:** ${keyBuyRate}\n**Sell:** ${keySellRate}\n**Source:** ${
-                        key.src === 'manual'
-                            ? 'Manual'
-                            : this.bot.pricelist.isUseCustomPricer
-                            ? 'Custom pricer'
-                            : 'PriceDB'
-                    }`
+                    keyBuyRate,
+                    keySellRate,
+                    key.src === 'manual' ? 'Manual' : this.bot.pricelist.isUseCustomPricer ? 'Custom pricer' : 'PriceDB'
                 );
                 return;
             }

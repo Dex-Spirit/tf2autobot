@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { createCanvas } from '@napi-rs/canvas';
 
-import { CARD_BG, CARD_BORDER, FONT_REGULAR, FONT_SEMIBOLD, PILL_TEXT, roundedRect } from './cardCanvas';
+import { CARD_BG, CARD_BORDER, FONT_SEMIBOLD, roundedRect } from './cardCanvas';
 import { registerTradeCardFonts } from './renderTradeCard';
 
 interface HistoryPoint {
@@ -13,8 +13,10 @@ interface HistoryPoint {
 const WIDTH = 960;
 const HEIGHT = 360;
 const PAD = 56;
-const BUY = '#72B7FF';
-const SELL = '#8FE388';
+const BUY = '#00C896';
+const SELL = '#FF4D4F';
+const PLOT_BG = '#202D40';
+const GRID = 'rgba(151, 169, 194, 0.12)';
 
 /** Draw the last 90 days of PriceDB buy/sell history in current-rate ref equivalent. */
 export default async function renderSkuChart(sku: string, keyRate: number): Promise<Buffer | null> {
@@ -49,35 +51,64 @@ export default async function renderSkuChart(sku: string, keyRate: number): Prom
         ctx.strokeStyle = CARD_BORDER;
         ctx.lineWidth = 2;
         ctx.stroke();
-        ctx.font = `24px ${FONT_SEMIBOLD}`;
-        ctx.fillStyle = PILL_TEXT;
-        ctx.fillText('PRICE HISTORY · 90 DAYS', PAD, 42);
-        ctx.font = `16px ${FONT_REGULAR}`;
-        ctx.fillStyle = '#B8BEC9';
-        ctx.textAlign = 'right';
-        ctx.fillText('Current-rate ref equivalent', WIDTH - PAD, 42);
+        const plot = { x: PAD + 40, y: 26, width: WIDTH - PAD - 56, height: HEIGHT - 82 };
+        ctx.fillStyle = PLOT_BG;
+        ctx.fillRect(plot.x, plot.y, plot.width, plot.height);
 
         for (let i = 0; i <= 4; i++) {
-            const y = 70 + ((HEIGHT - PAD - 70) * i) / 4;
+            const y = plot.y + (plot.height * i) / 4;
             const value = max - (range * i) / 4;
-            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+            ctx.strokeStyle = GRID;
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(PAD, y);
-            ctx.lineTo(WIDTH - PAD, y);
+            ctx.moveTo(plot.x, y);
+            ctx.lineTo(plot.x + plot.width, y);
             ctx.stroke();
             ctx.fillStyle = '#B8BEC9';
             ctx.textAlign = 'left';
-            ctx.fillText(`${value.toFixed(2)} ref`, 8, y + 5);
+            ctx.fillText(`${value.toFixed(2)} ref`, 10, y + 5);
         }
 
+        for (let i = 0; i <= 5; i++) {
+            const x = plot.x + (plot.width * i) / 5;
+            const time = new Date((first + (span * i) / 5) * 1000);
+            ctx.strokeStyle = GRID;
+            ctx.beginPath();
+            ctx.moveTo(x, plot.y);
+            ctx.lineTo(x, plot.y + plot.height);
+            ctx.stroke();
+            ctx.fillStyle = '#9AA9BE';
+            ctx.textAlign = 'center';
+            ctx.fillText(
+                `${time.getDate().toString().padStart(2, '0')}/${(time.getMonth() + 1).toString().padStart(2, '0')}`,
+                x,
+                HEIGHT - 22
+            );
+        }
+
+        const pointAt = (point: HistoryPoint, value: (point: HistoryPoint) => number): [number, number] => [
+            plot.x + ((point.time - first) / span) * plot.width,
+            plot.y + ((max - value(point)) / range) * plot.height
+        ];
         const drawLine = (color: string, value: (point: HistoryPoint) => number): void => {
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 3;
+            ctx.fillStyle = `${color}22`;
             ctx.beginPath();
             history.forEach((point, index) => {
-                const x = PAD + ((point.time - first) / span) * (WIDTH - PAD * 2);
-                const y = 70 + ((max - value(point)) / range) * (HEIGHT - PAD - 70);
+                const [x, y] = pointAt(point, value);
+                if (index === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            const [lastX] = pointAt(history[history.length - 1], value);
+            const [firstX] = pointAt(history[0], value);
+            ctx.lineTo(lastX, plot.y + plot.height);
+            ctx.lineTo(firstX, plot.y + plot.height);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            history.forEach((point, index) => {
+                const [x, y] = pointAt(point, value);
                 if (index === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             });
@@ -88,9 +119,9 @@ export default async function renderSkuChart(sku: string, keyRate: number): Prom
         ctx.font = `16px ${FONT_SEMIBOLD}`;
         ctx.fillStyle = BUY;
         ctx.textAlign = 'left';
-        ctx.fillText('● Buy', PAD, HEIGHT - 18);
+        ctx.fillText('● Buy Price', plot.x, 18);
         ctx.fillStyle = SELL;
-        ctx.fillText('● Sell', PAD + 75, HEIGHT - 18);
+        ctx.fillText('● Sell Price', plot.x + 100, 18);
         return canvas.toBuffer('image/png');
     } catch {
         return null;

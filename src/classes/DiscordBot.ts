@@ -24,6 +24,7 @@ import renderPureStockCard from './DiscordWebhook/tradeCard/renderPureStockCard'
 import { renderStockCardPage, stockCardPageCount } from './DiscordWebhook/tradeCard/renderStockCards';
 import type { StockCardEntry } from './DiscordWebhook/tradeCard/renderStockCards';
 import renderSkuChart from './DiscordWebhook/tradeCard/renderSkuChart';
+import renderRateCard from './DiscordWebhook/tradeCard/renderRateCard';
 
 const STOCK_PAGER_TIMEOUT_MS = 15 * 60 * 1000;
 
@@ -33,6 +34,7 @@ interface StockPagerSession {
     title: string;
     currentPage: number;
     totalPages: number;
+    pageSize: number;
     detailsText?: string;
     message: Message;
 }
@@ -241,6 +243,17 @@ export default class DiscordBot {
         }
     }
 
+    public async sendRateAnswer(origMessage: Message, buy: string, sell: string, source: string): Promise<void> {
+        const card = await renderRateCard(buy, sell, source, this.bot.options.steamAccountName);
+        if (card === null)
+            return this.sendV2TextAnswer(
+                origMessage,
+                'Key Rate',
+                `**Buy:** ${buy}\n**Sell:** ${sell}\n**Source:** ${source}`
+            );
+        await this.sendCardGallery(origMessage, [card], 'key-rate', `Key rate: ${buy} / ${sell}`);
+    }
+
     public async sendPureStockAnswer(origMessage: Message, stock: CurrentPure): Promise<void> {
         const fallback = `💰 I have ${pureStock(this.bot).join(' and ')} in my inventory.`;
         const card = await renderPureStockCard(stock, this.bot.options.steamAccountName);
@@ -257,10 +270,11 @@ export default class DiscordBot {
         entries: StockCardEntry[],
         title: string,
         fallback: string,
-        detailsText?: string
+        detailsText?: string,
+        pageSize = 20
     ): Promise<void> {
-        const totalPages = stockCardPageCount(entries);
-        const card = await renderStockCardPage(entries, this.bot.options.steamAccountName, title, 0);
+        const totalPages = stockCardPageCount(entries, pageSize);
+        const card = await renderStockCardPage(entries, this.bot.options.steamAccountName, title, 0, pageSize);
         if (card === null) {
             this.sendAnswer(origMessage, fallback);
             return;
@@ -274,6 +288,7 @@ export default class DiscordBot {
                 title,
                 currentPage: 0,
                 totalPages,
+                pageSize,
                 detailsText
             } as Omit<StockPagerSession, 'message'>;
             const message = await (origMessage.channel as TextChannel).send({
@@ -384,7 +399,13 @@ export default class DiscordBot {
         }
 
         await interaction.deferUpdate();
-        const card = await renderStockCardPage(session.entries, this.bot.options.steamAccountName, session.title, page);
+        const card = await renderStockCardPage(
+            session.entries,
+            this.bot.options.steamAccountName,
+            session.title,
+            page,
+            session.pageSize
+        );
         if (card === null) return;
 
         session.currentPage = page;
