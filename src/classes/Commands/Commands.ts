@@ -3,6 +3,7 @@ import SKU from '@tf2autobot/tf2-sku';
 import pluralize from 'pluralize';
 import Currencies from '@tf2autobot/tf2-currencies';
 import dayjs from 'dayjs';
+import { Message as DiscordMessage } from 'discord.js';
 
 import * as c from './sub-classes/export';
 import { removeLinkProtocol, getItemFromParams, getItemAndAmount } from './functions/utils';
@@ -411,11 +412,19 @@ export default class Commands {
                     );
                 }
 
-                this.bot.sendMessage(steamID, `• ${sku}\nhttps://pricedb.io/item/${sku}`);
+                if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot) {
+                    void this.bot.discordBot.sendSkuAnswer(steamID.redirectAnswerTo, itemNamesOrSkus, sku);
+                } else {
+                    this.bot.sendMessage(steamID, `• ${sku}\nhttps://pricedb.io/item/${sku}`);
+                }
             } else {
                 // Receive sku
                 const name = this.bot.schema.getName(SKU.fromString(itemNamesOrSkus), false);
-                this.bot.sendMessage(steamID, `• ${name}\nhttps://pricedb.io/item/${itemNamesOrSkus}`);
+                if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot) {
+                    void this.bot.discordBot.sendSkuAnswer(steamID.redirectAnswerTo, name, itemNamesOrSkus);
+                } else {
+                    this.bot.sendMessage(steamID, `• ${name}\nhttps://pricedb.io/item/${itemNamesOrSkus}`);
+                }
             }
         } else {
             const results: { source: string; generated: string }[] = [];

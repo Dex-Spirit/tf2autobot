@@ -23,6 +23,7 @@ import { CurrentPure, stock as pureStock } from '../lib/tools/pure';
 import renderPureStockCard from './DiscordWebhook/tradeCard/renderPureStockCard';
 import { renderStockCardPage, stockCardPageCount } from './DiscordWebhook/tradeCard/renderStockCards';
 import type { StockCardEntry } from './DiscordWebhook/tradeCard/renderStockCards';
+import renderSkuChart from './DiscordWebhook/tradeCard/renderSkuChart';
 
 const STOCK_PAGER_TIMEOUT_MS = 15 * 60 * 1000;
 
@@ -190,6 +191,53 @@ export default class DiscordBot {
             this.sendMessage(origMessage, partialMessage);
         } else {
             this.sendMessage(origMessage, formattedMessage); // TODO: normal parsing of markup things
+        }
+    }
+
+    public async sendV2TextAnswer(origMessage: Message, title: string, body: string): Promise<void> {
+        try {
+            await (origMessage.channel as TextChannel).send({
+                flags: MessageFlagsBitField.Flags.IsComponentsV2,
+                components: [
+                    {
+                        type: 17,
+                        accent_color: Number(this.bot.options.discordWebhook.embedColor),
+                        components: [{ type: 10, content: `## ${title}\n${body}` }]
+                    }
+                ] as unknown as MessageCreateOptions['components']
+            });
+        } catch (err) {
+            log.warn('Failed to send Discord Components V2 text response:', err);
+            this.sendAnswer(origMessage, `${title}\n${body}`);
+        }
+    }
+
+    public async sendSkuAnswer(origMessage: Message, name: string, sku: string): Promise<void> {
+        const chart = await renderSkuChart(sku, this.bot.pricelist.getKeyPrices.sell.metal);
+        const components = [
+            {
+                type: 17,
+                accent_color: Number(this.bot.options.discordWebhook.embedColor),
+                components: [
+                    { type: 10, content: `## 🏷️ ${name}\n**SKU:** \`${sku}\`` },
+                    ...(chart ? [{ type: 12, items: [{ media: { url: 'attachment://sku-history.png' } }] }] : [])
+                ]
+            },
+            {
+                type: 1,
+                components: [{ type: 2, style: 5, label: 'Open PriceDB item', url: `https://pricedb.io/item/${sku}` }]
+            }
+        ] as unknown as MessageCreateOptions['components'];
+
+        try {
+            await (origMessage.channel as TextChannel).send({
+                flags: MessageFlagsBitField.Flags.IsComponentsV2,
+                components,
+                files: chart ? [{ attachment: chart, name: 'sku-history.png' }] : []
+            });
+        } catch (err) {
+            log.warn('Failed to send Discord SKU card:', err);
+            this.sendAnswer(origMessage, `• ${name}\nhttps://pricedb.io/item/${sku}`);
         }
     }
 

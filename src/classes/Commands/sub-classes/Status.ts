@@ -3,6 +3,7 @@ import pluralize from 'pluralize';
 import Currencies from '@tf2autobot/tf2-currencies';
 import SKU from '@tf2autobot/tf2-sku';
 import * as timersPromises from 'timers/promises';
+import { Message as DiscordMessage } from 'discord.js';
 import Bot from '../../Bot';
 import CommandParser from '../../CommandParser';
 import { stats, profit, itemStats, testPriceKey } from '../../../lib/tools/export';
@@ -435,6 +436,35 @@ export default class StatusCommands {
     }
 
     versionCommand(steamID: SteamID): void {
+        if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot) {
+            void this.bot.checkForUpdates
+                .then(({ hasNewVersion, latestVersion, canUpdateRepo, updateMessage, newVersionIsMajor }) => {
+                    const current = process.env.BOT_VERSION_LABEL ?? 'unknown';
+                    const body = hasNewVersion
+                        ? `**Current:** ${current}\n**Latest:** PDB-${latestVersion}\n**Update:** Available` +
+                          (updateMessage ? `\n**Message:** ${updateMessage}` : '') +
+                          `\n**Automatic update:** ${
+                              this.bot.isCloned() &&
+                              process.env.pm_id !== undefined &&
+                              canUpdateRepo &&
+                              !newVersionIsMajor
+                                  ? 'Available with !updaterepo'
+                                  : 'Not available'
+                          }`
+                        : `**Current:** ${current}\n✅ You are running the latest version.`;
+                    return this.bot.discordBot?.sendV2TextAnswer(steamID.redirectAnswerTo, '📦 Bot Version', body);
+                })
+                .catch(err => {
+                    log.warn('Failed to check bot version for Discord:', err);
+                    this.bot.discordBot?.sendV2TextAnswer(
+                        steamID.redirectAnswerTo,
+                        '📦 Bot Version',
+                        '❌ Failed to check for an update.'
+                    );
+                });
+            return;
+        }
+
         this.bot.sendMessage(
             steamID,
             `Currently running PriceDB Autobot ${process.env.BOT_VERSION_LABEL}. Checking for a new version...`
