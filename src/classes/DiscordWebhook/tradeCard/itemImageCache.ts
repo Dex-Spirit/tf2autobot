@@ -115,7 +115,7 @@ async function download(sku: string): Promise<Image | null> {
         timeout: FETCH_TIMEOUT,
         maxRedirects: 5,
         maxContentLength: MAX_DOWNLOAD_BYTES,
-        headers: { 'User-Agent': 'TF2AutobotCritTF@' + process.env.BOT_VERSION },
+        headers: { 'User-Agent': 'TF2AutobotPriceDB@' + process.env.BOT_VERSION },
         validateStatus: status => status === 200
     });
 
@@ -145,7 +145,7 @@ export async function loadAvatar(url: string): Promise<Image | null> {
             timeout: FETCH_TIMEOUT,
             maxRedirects: 5,
             maxContentLength: MAX_DOWNLOAD_BYTES,
-            headers: { 'User-Agent': 'TF2AutobotCritTF@' + process.env.BOT_VERSION }
+            headers: { 'User-Agent': 'TF2AutobotPriceDB@' + process.env.BOT_VERSION }
         });
 
         const contentType = response.headers['content-type'] as string | undefined;
