@@ -60,7 +60,7 @@ export const DEFAULTS: JsonOptions = {
         },
         skipItemsInTrade: {
             enable: true,
-            timeoutMinutes: 0
+            cancelOfferAfterMinutes: 0
         },
         weaponsAsCurrency: {
             enable: true,
@@ -1219,7 +1219,7 @@ interface OnlyEnable {
 }
 
 interface SkipItemsInTrade extends OnlyEnable {
-    timeoutMinutes?: number;
+    cancelOfferAfterMinutes?: number;
 }
 
 // ------------ Global Disable ------------

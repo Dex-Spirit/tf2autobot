@@ -498,12 +498,12 @@ export const optionsSchema: jsonschema.Schema = {
                         enable: {
                             type: 'boolean'
                         },
-                        timeoutMinutes: {
+                        cancelOfferAfterMinutes: {
                             type: 'integer',
                             minimum: 0
                         }
                     },
-                    required: ['enable', 'timeoutMinutes'],
+                    required: ['enable', 'cancelOfferAfterMinutes'],
                     additionalProperties: false
                 },
                 weaponsAsCurrency: {

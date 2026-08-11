@@ -2082,7 +2082,7 @@ export default class Trades {
     private isExpiringOffer(offer: TradeOffer): boolean {
         return (
             this.bot.options.miscSettings.skipItemsInTrade.enable &&
-            this.bot.options.miscSettings.skipItemsInTrade.timeoutMinutes > 0 &&
+            this.bot.options.miscSettings.skipItemsInTrade.cancelOfferAfterMinutes > 0 &&
             offer.isOurOffer &&
             offer.data('handledByUs') === true &&
             this.isActiveOffer(offer)
@@ -2099,7 +2099,7 @@ export default class Trades {
 
         const createdAt =
             offer.created instanceof Date && !isNaN(offer.created.valueOf()) ? offer.created.valueOf() : Date.now();
-        const deadline = createdAt + this.bot.options.miscSettings.skipItemsInTrade.timeoutMinutes * 60 * 1000;
+        const deadline = createdAt + this.bot.options.miscSettings.skipItemsInTrade.cancelOfferAfterMinutes * 60 * 1000;
         const delay = retryDelay === undefined ? Math.max(0, deadline - Date.now()) : retryDelay;
 
         const timer = setTimeout(() => {
