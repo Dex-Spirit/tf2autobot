@@ -18,18 +18,16 @@ const SELL = '#FF4D4F';
 const PLOT_BG = '#202D40';
 const GRID = 'rgba(151, 169, 194, 0.12)';
 
-/** Draw the last 90 days of PriceDB buy/sell history in current-rate ref equivalent. */
+/** Draw the latest 15 PriceDB buy/sell records in current-rate ref equivalent. */
 export default async function renderSkuChart(sku: string, keyRate: number): Promise<Buffer | null> {
     try {
-        const start = Math.floor((Date.now() - 90 * 24 * 60 * 60 * 1000) / 1000);
         const response = await axios.get<HistoryPoint[]>(
             `https://pricedb.io/api/item-history/${encodeURIComponent(sku)}`,
             {
-                params: { start },
                 timeout: 5000
             }
         );
-        const history = response.data.filter(point => Number.isFinite(point.time));
+        const history = response.data.filter(point => Number.isFinite(point.time)).slice(-15);
         if (history.length === 0) return null;
 
         registerTradeCardFonts();
