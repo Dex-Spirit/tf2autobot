@@ -230,7 +230,8 @@ interface StatBox {
 let fontsRegistered = false;
 let emojiAvailable = false;
 
-function registerFonts(): void {
+/** Register the shared typefaces used by all rendered Discord cards. */
+export function registerTradeCardFonts(): void {
     if (fontsRegistered) {
         return;
     }
@@ -856,7 +857,7 @@ export default async function renderTradeCard(
     meta?: TradeCardMeta
 ): Promise<Buffer | null> {
     try {
-        registerFonts();
+        registerTradeCardFonts();
 
         const dict = offer.data('dict') as ItemsDict;
         if (!dict || !dict.our || !dict.their) {

@@ -179,17 +179,18 @@ export default class DiscordBot {
             return;
         }
 
+        const stockText = `💰 I have ${pureStock(this.bot).join(' and ')} in my inventory.`;
         const components = [
             {
                 type: 17,
                 accent_color: Number(this.bot.options.discordWebhook.embedColor),
                 components: [
-                    { type: 10, content: '## 💰 Pure Stock' },
-                    { type: 14, divider: true, spacing: 1 },
                     { type: 12, items: [{ media: { url: 'attachment://pure-stock.png' } }] },
                     {
                         type: 10,
-                        content: `Metal total: **${Currencies.toRefined(stock.refTotalInScrap).toFixed(2)} ref**`
+                        content: `${stockText}\nMetal total: **${Currencies.toRefined(stock.refTotalInScrap).toFixed(
+                            2
+                        )} ref**`
                     }
                 ]
             }
