@@ -498,6 +498,15 @@
         "displayName": "",
         "avatarURL": "",
         "embedColor": "9171753",
+        "commandCards": {
+            "enable": true,
+            "text": true,
+            "pure": true,
+            "rate": true,
+            "sku": true,
+            "stock": true,
+            "pricelist": true
+        },
         "tradeSummary": {
             "enable": true,
             "url": [],
@@ -513,6 +522,11 @@
                 "itemSkus": [],
                 "tradeValueInRef": 0,
                 "withEscrow": true
+            },
+            "tradeCard": {
+                "enable": true,
+                "showQualityBorders": true,
+                "maxItemsPerSide": 8
             }
         },
         "declinedTrade": {
