@@ -119,14 +119,3 @@ export async function renderStockCardPage(
         return null;
     }
 }
-
-export async function renderStockCards(
-    entries: StockCardEntry[],
-    accountName: string,
-    title: string
-): Promise<Buffer[] | null> {
-    const cards = await Promise.all(
-        stockCardPages(entries).map((_, pageIndex) => renderStockCardPage(entries, accountName, title, pageIndex))
-    );
-    return cards.every((card): card is Buffer => card !== null) ? cards : null;
-}

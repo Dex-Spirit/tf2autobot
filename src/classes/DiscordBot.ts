@@ -37,6 +37,7 @@ interface StockPagerSession {
     pageSize: number;
     detailsText?: string;
     message: Message;
+    expiryTimer: NodeJS.Timeout;
 }
 
 export default class DiscordBot {
@@ -113,6 +114,10 @@ export default class DiscordBot {
 
     public stop(): void {
         log.info('Logging out from Discord...');
+        for (const session of this.stockPagers.values()) {
+            clearTimeout(session.expiryTimer);
+        }
+        this.stockPagers.clear();
         void this.client.destroy();
     }
 
@@ -290,7 +295,7 @@ export default class DiscordBot {
                 totalPages,
                 pageSize,
                 detailsText
-            } as Omit<StockPagerSession, 'message'>;
+            } as Omit<StockPagerSession, 'message' | 'expiryTimer'>;
             const message = await (origMessage.channel as TextChannel).send({
                 flags: MessageFlagsBitField.Flags.IsComponentsV2,
                 components: this.stockPagerComponents(session, token),
@@ -298,8 +303,8 @@ export default class DiscordBot {
             });
 
             if (totalPages > 1) {
-                this.stockPagers.set(token, { ...session, message });
-                setTimeout(() => void this.expireStockPager(token), STOCK_PAGER_TIMEOUT_MS);
+                const expiryTimer = setTimeout(() => void this.expireStockPager(token), STOCK_PAGER_TIMEOUT_MS);
+                this.stockPagers.set(token, { ...session, message, expiryTimer });
             }
         } catch (err) {
             log.warn('Failed to send Discord stock card; sending text fallback:', err);
@@ -421,6 +426,7 @@ export default class DiscordBot {
         if (session === undefined) return;
 
         this.stockPagers.delete(token);
+        clearTimeout(session.expiryTimer);
         try {
             await session.message.edit({ components: this.stockPagerComponents(session, undefined, true) });
         } catch (err) {

@@ -11,16 +11,8 @@ export const TILE_SIZE = 226;
 const IMAGE_ENDPOINT = 'https://sku.pricedb.io/api/sku';
 const FETCH_TIMEOUT = 5000;
 const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024;
-const MEMORY_CACHE_LIMIT = 200;
-const NEGATIVE_CACHE_MS = 6 * 60 * 60 * 1000;
 
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-
-/** Decoded tiles, most-recently-used last. Map iteration order gives us the LRU for free. */
-const memoryCache = new Map<string, Image>();
-
-/** sku → epoch ms after which we are willing to try the network again. */
-const negativeCache = new Map<string, number>();
 
 /** sku → in-flight fetch, so a trade containing the same sku twice only hits the network once. */
 const inFlight = new Map<string, Promise<Image | null>>();
@@ -60,15 +52,6 @@ function cacheDir(accountName: string): string {
     return path.join(getFilesPath(accountName), 'item-images');
 }
 
-function rememberInMemory(sku: string, image: Image): void {
-    memoryCache.delete(sku);
-    memoryCache.set(sku, image);
-
-    while (memoryCache.size > MEMORY_CACHE_LIMIT) {
-        memoryCache.delete(memoryCache.keys().next().value);
-    }
-}
-
 /** Contain-fit the source onto a transparent TILE_SIZE square and re-encode. */
 function toTile(source: Image): Buffer {
     const canvas = createCanvas(TILE_SIZE, TILE_SIZE);
@@ -90,7 +73,8 @@ async function readFromDisk(sku: string, accountName: string): Promise<Image | n
         const buffer = await fs.readFile(path.join(cacheDir(accountName), cacheFileName(sku)));
         return await loadImage(buffer);
     } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') log.debug(`Could not read cached item image for ${sku}: `, err);
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT')
+            log.debug(`Could not read cached item image for ${sku}: `, err);
         return null;
     }
 }
@@ -102,7 +86,7 @@ async function writeToDisk(sku: string, accountName: string, tile: Buffer): Prom
         await fs.mkdir(dir, { recursive: true });
         await fs.writeFile(path.join(dir, cacheFileName(sku)), tile);
     } catch (err) {
-        // A cache we cannot persist is still a working cache in memory.
+        // Rendering can still continue when the disk cache cannot be persisted.
         log.debug(`Could not persist item image for ${sku}: `, err);
     }
 }
@@ -168,25 +152,11 @@ export async function loadAvatar(url: string): Promise<Image | null> {
 /**
  * Resolve a sku to a TILE_SIZE square icon, or null when no usable art exists.
  *
- * Lookup order: memory → negative cache → disk → network. Successful downloads
- * are downscaled before being written, so the cache holds ~15 KB tiles rather
- * than the 47–130 KB originals the endpoint serves.
+ * Lookup order: disk → network. Successful downloads are downscaled before being
+ * written, so future renders avoid retaining decoded image data in process memory.
+ * Only simultaneous requests for the same SKU share an in-flight image.
  */
 export async function getItemIcon(sku: string, accountName: string): Promise<Image | null> {
-    const cached = memoryCache.get(sku);
-    if (cached) {
-        rememberInMemory(sku, cached);
-        return cached;
-    }
-
-    const blockedUntil = negativeCache.get(sku);
-    if (blockedUntil !== undefined) {
-        if (Date.now() < blockedUntil) {
-            return null;
-        }
-        negativeCache.delete(sku);
-    }
-
     const pending = inFlight.get(sku);
     if (pending !== undefined) {
         return pending;
@@ -195,26 +165,19 @@ export async function getItemIcon(sku: string, accountName: string): Promise<Ima
     const task = (async () => {
         const fromDisk = await readFromDisk(sku, accountName);
         if (fromDisk) {
-            rememberInMemory(sku, fromDisk);
             return fromDisk;
         }
 
         try {
             const source = await download(sku);
-            if (!source) {
-                negativeCache.set(sku, Date.now() + NEGATIVE_CACHE_MS);
-                return null;
-            }
+            if (!source) return null;
 
             const tile = toTile(source);
             await writeToDisk(sku, accountName, tile);
 
-            const image = await loadImage(tile);
-            rememberInMemory(sku, image);
-            return image;
+            return loadImage(tile);
         } catch (err) {
             log.debug(`Could not fetch item image for ${sku}: `, err);
-            negativeCache.set(sku, Date.now() + NEGATIVE_CACHE_MS);
             return null;
         }
     })().finally(() => inFlight.delete(sku));
