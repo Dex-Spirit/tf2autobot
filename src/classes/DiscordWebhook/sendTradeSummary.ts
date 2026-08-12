@@ -10,6 +10,8 @@ import Bot from '../Bot';
 import { sendToAdmin } from '../MyHandler/offer/accepted/processAccepted';
 import { calculateFifoProfit, getFifoCostBasis, type FIFOEntry } from '../InventoryCostBasis';
 import type { TradeCardMeta, TradeCardOptions } from './tradeCard';
+import { renderCard as renderCardInWorker } from './tradeCard/cardRenderClient';
+import { TradeCardPayload } from './tradeCard/cardRenderProtocol';
 // A direct import, unlike ./tradeCard below: offerFacts pulls in no native
 // canvas binding, so it cannot be the thing that costs us the summary.
 import {
@@ -620,16 +622,23 @@ export function buildStatusBlock(readings: StatReading[], prices: PricedItem[]):
 }
 
 function statusLines(reading: StatReading): string[] {
-    if (reading.kind === 'keyRate' || reading.kind === 'pureStock') return [`${reading.label} ${reading.value}  ·  ${reading.sub}`];
-    if (reading.kind === 'totalItems') return [`${reading.label} ${reading.value}${reading.sub ? ` ${reading.sub}` : ''}`];
+    if (reading.kind === 'keyRate' || reading.kind === 'pureStock')
+        return [`${reading.label} ${reading.value}  ·  ${reading.sub}`];
+    if (reading.kind === 'totalItems')
+        return [`${reading.label} ${reading.value}${reading.sub ? ` ${reading.sub}` : ''}`];
     if (!reading.detailed) {
         const [, figure, ms] = reading.rows[0];
         return [`${reading.label} ${figure}${timeMsSuffix(reading.showMs, ms)}`];
     }
-    return [reading.label, ...reading.rows.map(([caption, figure, ms]) => `- ${caption}: ${figure}${timeMsSuffix(reading.showMs, ms)}`)];
+    return [
+        reading.label,
+        ...reading.rows.map(([caption, figure, ms]) => `- ${caption}: ${figure}${timeMsSuffix(reading.showMs, ms)}`)
+    ];
 }
 
-function timeMsSuffix(showMs: boolean, ms: number): string { return showMs ? ` (${ms} ms)` : ''; }
+function timeMsSuffix(showMs: boolean, ms: number): string {
+    return showMs ? ` (${ms} ms)` : '';
+}
 
 function appendPriceLines(lines: string[], prices: PricedItem[]): void {
     if (prices.length === 0) return;
@@ -714,13 +723,67 @@ async function renderCard(
     meta: TradeCardMeta
 ): Promise<Buffer | null> {
     try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { renderTradeCard } = require('./tradeCard') as typeof import('./tradeCard');
-        return await renderTradeCard(offer, bot, options, meta);
+        return await renderCardInWorker({ type: 'trade', payload: buildTradeCardPayload(offer, bot, options, meta) });
     } catch (err) {
         log.warn(`Trade card unavailable for offer #${offer.id}, falling back to text: `, err);
         return null;
     }
+}
+
+function buildTradeCardPayload(
+    offer: TradeOffer,
+    bot: Bot,
+    options: TradeCardOptions,
+    meta: TradeCardMeta
+): TradeCardPayload {
+    const prices = offer.data('prices') as Record<string, unknown> | undefined;
+    const names: Record<string, string> = {};
+    for (const sku of Object.keys(prices ?? {})) {
+        try {
+            names[sku] = bot.schema.getName(SKU.fromString(sku), false);
+        } catch {
+            names[sku] = sku;
+        }
+    }
+
+    const inventory = bot.inventoryManager.getInventory;
+    const autokeys = bot.handler.autokeys;
+    return {
+        offer: {
+            id: offer.id,
+            dict: offer.data('dict'),
+            value: offer.data('value'),
+            highValue: offer.data('highValue'),
+            prices
+        },
+        options: { ...options },
+        meta: { ...meta },
+        bot: {
+            options: {
+                steamAccountName: bot.options.steamAccountName,
+                tradeSummary: bot.options.tradeSummary,
+                discordWebhook: bot.options.discordWebhook
+            },
+            pricelist: {
+                getKeyPrice: { metal: bot.pricelist.getKeyPrice.metal },
+                getKeyPrices: bot.pricelist.getKeyPrices,
+                isUseCustomPricer: bot.pricelist.isUseCustomPricer
+            },
+            inventory: {
+                currencies: inventory.getCurrencies(bot.craftWeapons, true),
+                totalItems: inventory.getTotalItems
+            },
+            tf2: { backpackSlots: bot.tf2.backpackSlots },
+            handler: {
+                autokeys: {
+                    isEnabled: autokeys.isEnabled,
+                    getActiveStatus: autokeys.getActiveStatus,
+                    getOverallStatus: autokeys.getOverallStatus
+                }
+            },
+            names
+        }
+    };
 }
 
 /** One realised sale, before it is formatted for the detail block. */

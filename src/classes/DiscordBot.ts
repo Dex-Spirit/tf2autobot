@@ -20,11 +20,8 @@ import Bot from './Bot';
 import SteamID from 'steamid';
 import { uptime } from '../lib/tools/time';
 import { CurrentPure, stock as pureStock } from '../lib/tools/pure';
-import renderPureStockCard from './DiscordWebhook/tradeCard/renderPureStockCard';
-import { renderStockCardPage, stockCardPageCount } from './DiscordWebhook/tradeCard/renderStockCards';
-import type { StockCardEntry } from './DiscordWebhook/tradeCard/renderStockCards';
-import renderSkuChart from './DiscordWebhook/tradeCard/renderSkuChart';
-import renderRateCard from './DiscordWebhook/tradeCard/renderRateCard';
+import { renderCard } from './DiscordWebhook/tradeCard/cardRenderClient';
+import { stockCardPageCount, StockCardEntry } from './DiscordWebhook/tradeCard/cardRenderProtocol';
 
 const STOCK_PAGER_TIMEOUT_MS = 15 * 60 * 1000;
 
@@ -220,7 +217,7 @@ export default class DiscordBot {
     }
 
     public async sendSkuAnswer(origMessage: Message, name: string, sku: string): Promise<void> {
-        const chart = await renderSkuChart(sku, this.bot.pricelist.getKeyPrices.sell.metal);
+        const chart = await renderCard({ type: 'sku-chart', sku, keyRate: this.bot.pricelist.getKeyPrices.sell.metal });
         const components = [
             {
                 type: 17,
@@ -249,7 +246,13 @@ export default class DiscordBot {
     }
 
     public async sendRateAnswer(origMessage: Message, buy: string, sell: string, source: string): Promise<void> {
-        const card = await renderRateCard(buy, sell, source, this.bot.options.steamAccountName);
+        const card = await renderCard({
+            type: 'rate',
+            buy,
+            sell,
+            source,
+            accountName: this.bot.options.steamAccountName
+        });
         if (card === null)
             return this.sendV2TextAnswer(
                 origMessage,
@@ -261,7 +264,7 @@ export default class DiscordBot {
 
     public async sendPureStockAnswer(origMessage: Message, stock: CurrentPure): Promise<void> {
         const fallback = `💰 I have ${pureStock(this.bot).join(' and ')} in my inventory.`;
-        const card = await renderPureStockCard(stock, this.bot.options.steamAccountName);
+        const card = await renderCard({ type: 'pure', stock, accountName: this.bot.options.steamAccountName });
         if (card === null) {
             this.sendAnswer(origMessage, fallback);
             return;
@@ -279,7 +282,14 @@ export default class DiscordBot {
         pageSize = 20
     ): Promise<void> {
         const totalPages = stockCardPageCount(entries, pageSize);
-        const card = await renderStockCardPage(entries, this.bot.options.steamAccountName, title, 0, pageSize);
+        const card = await renderCard({
+            type: 'stock',
+            entries,
+            accountName: this.bot.options.steamAccountName,
+            title,
+            pageIndex: 0,
+            pageSize
+        });
         if (card === null) {
             this.sendAnswer(origMessage, fallback);
             return;
@@ -404,13 +414,14 @@ export default class DiscordBot {
         }
 
         await interaction.deferUpdate();
-        const card = await renderStockCardPage(
-            session.entries,
-            this.bot.options.steamAccountName,
-            session.title,
-            page,
-            session.pageSize
-        );
+        const card = await renderCard({
+            type: 'stock',
+            entries: session.entries,
+            accountName: this.bot.options.steamAccountName,
+            title: session.title,
+            pageIndex: page,
+            pageSize: session.pageSize
+        });
         if (card === null) return;
 
         session.currentPage = page;

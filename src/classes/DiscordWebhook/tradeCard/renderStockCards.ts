@@ -1,5 +1,6 @@
 import { createCanvas } from '@napi-rs/canvas';
 
+import { StockCardEntry, stockCardPageCount as pageCount } from './cardRenderProtocol';
 import { getItemIcon } from './itemImageCache';
 import { registerTradeCardFonts } from './renderTradeCard';
 import {
@@ -15,12 +16,7 @@ import {
     TILE_FILL
 } from './cardCanvas';
 
-export interface StockCardEntry {
-    sku: string;
-    name: string;
-    amount: number;
-    details?: string;
-}
+export { StockCardEntry } from './cardRenderProtocol';
 
 const WIDTH = 960;
 const PADDING = 24;
@@ -35,7 +31,7 @@ export function stockCardPages(entries: StockCardEntry[], pageSize = 20): StockC
 }
 
 export function stockCardPageCount(entries: StockCardEntry[], pageSize = 20): number {
-    return Math.ceil(entries.length / pageSize);
+    return pageCount(entries, pageSize);
 }
 
 export async function renderStockCardPage(
