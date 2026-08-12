@@ -199,6 +199,10 @@ export default class DiscordBot {
     }
 
     public async sendV2TextAnswer(origMessage: Message, title: string, body: string): Promise<void> {
+        if (!this.isCommandCardEnabled('text')) {
+            this.sendAnswer(origMessage, `${title}\n${body}`);
+            return;
+        }
         try {
             await (origMessage.channel as TextChannel).send({
                 flags: MessageFlagsBitField.Flags.IsComponentsV2,
@@ -217,6 +221,10 @@ export default class DiscordBot {
     }
 
     public async sendSkuAnswer(origMessage: Message, name: string, sku: string): Promise<void> {
+        if (!this.isCommandCardEnabled('sku')) {
+            this.sendAnswer(origMessage, `• ${name}\nhttps://pricedb.io/item/${sku}`);
+            return;
+        }
         const chart = await renderCard({ type: 'sku-chart', sku, keyRate: this.bot.pricelist.getKeyPrices.sell.metal });
         const components = [
             {
@@ -246,6 +254,10 @@ export default class DiscordBot {
     }
 
     public async sendRateAnswer(origMessage: Message, buy: string, sell: string, source: string): Promise<void> {
+        if (!this.isCommandCardEnabled('rate')) {
+            this.sendAnswer(origMessage, `Key rate: ${buy} / ${sell} (${source})`);
+            return;
+        }
         const card = await renderCard({
             type: 'rate',
             buy,
@@ -264,6 +276,10 @@ export default class DiscordBot {
 
     public async sendPureStockAnswer(origMessage: Message, stock: CurrentPure): Promise<void> {
         const fallback = `💰 I have ${pureStock(this.bot).join(' and ')} in my inventory.`;
+        if (!this.isCommandCardEnabled('pure')) {
+            this.sendAnswer(origMessage, fallback);
+            return;
+        }
         const card = await renderCard({ type: 'pure', stock, accountName: this.bot.options.steamAccountName });
         if (card === null) {
             this.sendAnswer(origMessage, fallback);
@@ -279,8 +295,13 @@ export default class DiscordBot {
         title: string,
         fallback: string,
         detailsText?: string,
-        pageSize = 20
+        pageSize = 20,
+        category: 'stock' | 'pricelist' = 'stock'
     ): Promise<void> {
+        if (!this.isCommandCardEnabled(category)) {
+            this.sendAnswer(origMessage, fallback);
+            return;
+        }
         const totalPages = stockCardPageCount(entries, pageSize);
         const card = await renderCard({
             type: 'stock',
@@ -386,6 +407,11 @@ export default class DiscordBot {
                 ]
             }
         ] as unknown as MessageCreateOptions['components'];
+    }
+
+    private isCommandCardEnabled(category: 'text' | 'pure' | 'rate' | 'sku' | 'stock' | 'pricelist'): boolean {
+        const commandCards = this.bot.options.discordWebhook.commandCards;
+        return commandCards?.enable !== false && commandCards?.[category] !== false;
     }
 
     private async handleStockPager(interaction: ButtonInteraction): Promise<void> {

@@ -557,6 +557,15 @@ export const DEFAULTS: JsonOptions = {
         displayName: '',
         avatarURL: '',
         embedColor: '9171753',
+        commandCards: {
+            enable: true,
+            text: true,
+            pure: true,
+            rate: true,
+            sku: true,
+            stock: true,
+            pricelist: true
+        },
         tradeSummary: {
             enable: true,
             url: [],
@@ -1739,6 +1748,7 @@ interface DiscordWebhook {
     displayName?: string;
     avatarURL?: string;
     embedColor?: string;
+    commandCards?: CommandCards;
     tradeSummary?: TradeSummaryDW;
     declinedTrade?: DeclinedTradeDW;
     offerReview?: OfferReviewDW;
@@ -1747,6 +1757,17 @@ interface DiscordWebhook {
     sendAlert?: SendAlertStatsDW;
     sendStats?: SendStatsDW;
     sendTf2Events?: SendTf2Events;
+}
+
+/** Cards sent in response to Discord bot commands; webhook trade cards are configured separately. */
+interface CommandCards extends OnlyEnable {
+    /** Components V2 text responses such as !get and !version. */
+    text?: boolean;
+    pure?: boolean;
+    rate?: boolean;
+    sku?: boolean;
+    stock?: boolean;
+    pricelist?: boolean;
 }
 
 interface TradeSummaryDW extends OnlyEnable {

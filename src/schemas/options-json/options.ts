@@ -1680,6 +1680,20 @@ export const optionsSchema: jsonschema.Schema = {
                     type: 'string',
                     pattern: '^[0-9]+$'
                 },
+                commandCards: {
+                    type: 'object',
+                    properties: {
+                        enable: { type: 'boolean' },
+                        text: { type: 'boolean' },
+                        pure: { type: 'boolean' },
+                        rate: { type: 'boolean' },
+                        sku: { type: 'boolean' },
+                        stock: { type: 'boolean' },
+                        pricelist: { type: 'boolean' }
+                    },
+                    required: ['enable', 'text', 'pure', 'rate', 'sku', 'stock', 'pricelist'],
+                    additionalProperties: false
+                },
                 tradeSummary: {
                     type: 'object',
                     properties: {

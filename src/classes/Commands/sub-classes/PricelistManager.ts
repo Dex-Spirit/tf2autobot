@@ -2196,7 +2196,8 @@ export default class PricelistManagerCommands {
                 `**${pluralize('item', listCount, true)} in pricelist**${
                     applyLimit < listCount ? ` · showing ${applyLimit}` : ''
                 }\n📦 Stock · quantity badge\n⚙️ Use \`!get sku=<sku>\` for full settings.`,
-                8
+                8,
+                'pricelist'
             );
             PricelistManagerCommands.isSending = false;
             return;
@@ -2315,7 +2316,8 @@ export default class PricelistManagerCommands {
                 `**${pluralize('item', listCount, true)} with PPU enabled**${
                     applyLimit < listCount ? ` · showing ${applyLimit}` : ''
                 }\n📈 Quantity badges show current tradable stock.`,
-                8
+                8,
+                'pricelist'
             );
             PricelistManagerCommands.isSending = false;
             return;
@@ -2656,7 +2658,8 @@ export default class PricelistManagerCommands {
                     `**${pluralize('item', filterCount, true)} found**\n🔍 ${display.join(' · ')}${
                         applyLimit < listCount ? ` · showing ${applyLimit}` : ''
                     }`,
-                    8
+                    8,
+                    'pricelist'
                 );
                 PricelistManagerCommands.isSending = false;
                 return;
