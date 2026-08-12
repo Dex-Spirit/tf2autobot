@@ -22,6 +22,7 @@ export type CardRenderRequest =
           title: string;
           pageIndex: number;
           pageSize: number;
+          showQualityBorders: boolean;
       }
     | { type: 'trade'; payload: TradeCardPayload };
 

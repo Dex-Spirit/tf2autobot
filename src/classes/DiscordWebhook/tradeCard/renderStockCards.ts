@@ -1,6 +1,7 @@
 import { createCanvas } from '@napi-rs/canvas';
 
 import { StockCardEntry, stockCardPageCount as pageCount } from './cardRenderProtocol';
+import { qualityColorHex } from '../../../lib/tools/qualityColor';
 import { getItemIcon } from './itemImageCache';
 import { registerTradeCardFonts } from './renderTradeCard';
 import {
@@ -23,6 +24,11 @@ const PADDING = 24;
 const GAP = 16;
 const TILE_HEIGHT = 176;
 const HEADER_HEIGHT = 70;
+const TILE_BORDER_FALLBACK = 'rgba(255, 255, 255, 0.18)';
+
+export function stockCardBorderColor(sku: string): string {
+    return qualityColorHex[sku.split(';')[1]] ?? TILE_BORDER_FALLBACK;
+}
 
 export function stockCardPages(entries: StockCardEntry[], pageSize = 20): StockCardEntry[][] {
     return Array.from({ length: Math.ceil(entries.length / pageSize) }, (_, page) =>
@@ -39,7 +45,8 @@ export async function renderStockCardPage(
     accountName: string,
     title: string,
     pageIndex: number,
-    pageSize = 20
+    pageSize = 20,
+    showQualityBorders = true
 ): Promise<Buffer | null> {
     const pages = stockCardPages(entries, pageSize);
     const page = pages[pageIndex];
@@ -79,8 +86,8 @@ export async function renderStockCardPage(
             roundedRect(ctx, x, y, tileWidth, TILE_HEIGHT, 16);
             ctx.fillStyle = TILE_FILL;
             ctx.fill();
-            ctx.strokeStyle = CARD_BORDER;
-            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = showQualityBorders ? stockCardBorderColor(entry.sku) : CARD_BORDER;
+            ctx.lineWidth = showQualityBorders ? 2.5 : 1.5;
             ctx.stroke();
             drawIcon(
                 ctx,

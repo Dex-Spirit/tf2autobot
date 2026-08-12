@@ -309,7 +309,8 @@ export default class DiscordBot {
             accountName: this.bot.options.steamAccountName,
             title,
             pageIndex: 0,
-            pageSize
+            pageSize,
+            showQualityBorders: this.bot.options.discordWebhook.commandCards?.showQualityBorders !== false
         });
         if (card === null) {
             this.sendAnswer(origMessage, fallback);
@@ -446,7 +447,8 @@ export default class DiscordBot {
             accountName: this.bot.options.steamAccountName,
             title: session.title,
             pageIndex: page,
-            pageSize: session.pageSize
+            pageSize: session.pageSize,
+            showQualityBorders: this.bot.options.discordWebhook.commandCards?.showQualityBorders !== false
         });
         if (card === null) return;
 

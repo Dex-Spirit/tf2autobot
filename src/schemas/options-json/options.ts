@@ -1685,13 +1685,14 @@ export const optionsSchema: jsonschema.Schema = {
                     properties: {
                         enable: { type: 'boolean' },
                         text: { type: 'boolean' },
+                        showQualityBorders: { type: 'boolean' },
                         pure: { type: 'boolean' },
                         rate: { type: 'boolean' },
                         sku: { type: 'boolean' },
                         stock: { type: 'boolean' },
                         pricelist: { type: 'boolean' }
                     },
-                    required: ['enable', 'text', 'pure', 'rate', 'sku', 'stock', 'pricelist'],
+                    required: ['enable', 'text', 'showQualityBorders', 'pure', 'rate', 'sku', 'stock', 'pricelist'],
                     additionalProperties: false
                 },
                 tradeSummary: {

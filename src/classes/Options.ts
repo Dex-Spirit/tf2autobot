@@ -560,6 +560,7 @@ export const DEFAULTS: JsonOptions = {
         commandCards: {
             enable: true,
             text: true,
+            showQualityBorders: true,
             pure: true,
             rate: true,
             sku: true,
@@ -1763,6 +1764,8 @@ interface DiscordWebhook {
 interface CommandCards extends OnlyEnable {
     /** Components V2 text responses such as !get and !version. */
     text?: boolean;
+    /** Outline item tiles in their TF2 quality colour. */
+    showQualityBorders?: boolean;
     pure?: boolean;
     rate?: boolean;
     sku?: boolean;

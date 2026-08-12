@@ -56,7 +56,8 @@ process.once('message', async (request: CardRenderRequest) => {
                     request.accountName,
                     request.title,
                     request.pageIndex,
-                    request.pageSize
+                    request.pageSize,
+                    request.showQualityBorders
                 );
                 break;
             }

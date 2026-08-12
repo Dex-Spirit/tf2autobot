@@ -501,6 +501,7 @@
         "commandCards": {
             "enable": true,
             "text": true,
+            "showQualityBorders": true,
             "pure": true,
             "rate": true,
             "sku": true,
