@@ -197,6 +197,17 @@ export default class ReviewCommands {
                 ? `\n\n ⚠️ Send "${prefix}accept ${offerId}" to accept or "${prefix}decline ${offerId}" to decline this offer.`
                 : `\n\n ⚠️ Send "${prefix}faccept ${offerId}" to force accept, or "${prefix}fdecline ${offerId}" to decline the trade now!`);
 
+        if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot) {
+            const isReview = offerData?.action?.action === 'skip';
+            const reason = isReview ? offerData.meta.uniqueReasons.join(', ') : '';
+            void this.bot.trades
+                .getOffer(offerId)
+                .then(offer =>
+                    this.bot.discordBot?.sendTradeAnswer(steamID.redirectAnswerTo, offer, reason, isReview, reply)
+                )
+                .catch(() => this.bot.sendMessage(steamID, reply));
+            return;
+        }
         this.bot.sendMessage(steamID, reply);
     }
 

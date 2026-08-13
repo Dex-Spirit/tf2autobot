@@ -34,9 +34,18 @@ type HttpError = Error & { code?: string | number };
 
 const STEAM_RETRY_ATTEMPTS = 5;
 const STEAM_RETRY_BASE_DELAY_SECONDS = 5;
+const EXPIRED_OFFER_RETRY_DELAY_MS = 30 * 1000;
 
 export default class Trades {
-    private itemsInTrade: string[] = [];
+    private readonly itemsInTrade = new Map<string, Set<string>>();
+
+    private readonly reservedItemsByOffer = new Map<string, Set<string>>();
+
+    private readonly offerExpiryTimers = new Map<string, NodeJS.Timeout>();
+
+    private readonly expiringOffers = new Set<string>();
+
+    private reservationSequence = 0;
 
     private receivedOffers: string[] = [];
 
@@ -66,6 +75,12 @@ export default class Trades {
         const active = this.getActiveOffers(pollData);
         const activeOrCreatedNeedsConfirmation = active.sent.concat(active.received);
 
+        this.itemsInTrade.clear();
+        this.reservedItemsByOffer.clear();
+        this.offerExpiryTimers.forEach(timer => clearTimeout(timer));
+        this.offerExpiryTimers.clear();
+        this.expiringOffers.clear();
+
         // Go through all sent / received offers and mark the items as in trade
         const activeCount = activeOrCreatedNeedsConfirmation.length;
 
@@ -79,7 +94,7 @@ export default class Trades {
             const itemsCount = items.length;
 
             for (let i = 0; i < itemsCount; i++) {
-                this.setItemInTrade = items[i].assetid;
+                this.reserveItem(`offer:${id}`, items[i].assetid);
             }
         }
 
@@ -181,6 +196,15 @@ export default class Trades {
             }
         });
 
+        sent.forEach(offer => {
+            if (this.isExpiringOffer(offer)) {
+                this.reserveOfferItems(offer);
+                this.scheduleOfferExpiry(offer);
+            } else if (offer.isOurOffer) {
+                this.clearOfferExpiry(offer);
+            }
+        });
+
         const activeReceived = received.filter(offer => offer.state === TradeOfferManager.ETradeOfferState['Active']);
         const activeReceivedCount = activeReceived.length;
 
@@ -215,8 +239,7 @@ export default class Trades {
     }
 
     isInTrade(assetid: string): boolean {
-        const haveInTrade = this.itemsInTrade.some(v => assetid === v);
-        return haveInTrade;
+        return this.itemsInTrade.has(assetid);
     }
 
     getActiveOffer(steamID: SteamID): string | null {
@@ -304,9 +327,7 @@ export default class Trades {
 
     private enqueueOffer(offer: TradeOffer): void {
         if (!this.receivedOffers.includes(offer.id)) {
-            offer.itemsToGive.forEach(item => {
-                this.setItemInTrade = item.assetid;
-            });
+            this.reserveOfferItems(offer);
 
             offer.data('partner', offer.partner.getSteamID64());
 
@@ -413,9 +434,7 @@ export default class Trades {
         }
 
         if (action === 'skip' || action === 'ignore') {
-            offer.itemsToGive.forEach(item => {
-                this.unsetItemInTrade = item.assetid;
-            });
+            this.releaseOfferItems(offer);
         }
 
         if (actionFunc === undefined) {
@@ -1334,10 +1353,8 @@ export default class Trades {
 
             const ourItems: TradeOfferManager.TradeOfferItem[] = [];
 
-            offer.itemsToGive.forEach(item => {
-                this.setItemInTrade = item.assetid;
-                ourItems.push(Trades.mapItem(item));
-            });
+            this.reserveOfferItems(offer);
+            offer.itemsToGive.forEach(item => ourItems.push(Trades.mapItem(item)));
 
             offer.data('_ourItems', ourItems);
 
@@ -1358,15 +1375,16 @@ export default class Trades {
                         'successfully created' + (status === 'pending' ? '; confirmation required' : '')
                     );
 
+                    this.moveReservationToOfferId(offer);
+                    this.scheduleOfferExpiry(offer);
+
                     return resolve(status);
                 })
                 .catch((err: Error) => {
                     const actionTime = dayjs().valueOf() - start;
                     offer.data('actionTime', actionTime);
 
-                    offer.itemsToGive.forEach(item => {
-                        this.unsetItemInTrade = item.assetid;
-                    });
+                    this.releaseOfferItems(offer);
                     return reject(err);
                 });
         });
@@ -1748,7 +1766,12 @@ export default class Trades {
                             if (!restarting) {
                                 return sendAlert('failedPM2', this.bot);
                             }
-                            this.bot.sendMessage(steamID, '🙇‍♂️ Sorry! Something went wrong. I am restarting myself...');
+                            if (this.bot.friends.isFriend(steamID)) {
+                                this.bot.sendMessage(
+                                    steamID,
+                                    '🙇‍♂️ Sorry! Something went wrong. I am restarting myself...'
+                                );
+                            }
                         })
                         .catch(err => {
                             log.warn('Error occurred while trying to restart: ', err);
@@ -1771,7 +1794,12 @@ export default class Trades {
                                 );
                             }
                             this.bot.messageAdmins(`🔄 Restarting...`, []);
-                            this.bot.sendMessage(steamID, '🙇‍♂️ Sorry! Something went wrong. I am restarting myself...');
+                            if (this.bot.friends.isFriend(steamID)) {
+                                this.bot.sendMessage(
+                                    steamID,
+                                    '🙇‍♂️ Sorry! Something went wrong. I am restarting myself...'
+                                );
+                            }
                         })
                         .catch(err => {
                             log.warn('Error occurred while trying to restart: ', err);
@@ -1812,9 +1840,11 @@ export default class Trades {
             // Offer is active
 
             // Mark items as in trade
-            offer.itemsToGive.forEach(item => {
-                this.setItemInTrade = item.id;
-            });
+            this.reserveOfferItems(offer);
+
+            if (this.isExpiringOffer(offer)) {
+                this.scheduleOfferExpiry(offer);
+            }
 
             if (offer.isOurOffer && offer.data('_ourItems') === undefined) {
                 // Items are not saved for sent offer, save them
@@ -1825,9 +1855,8 @@ export default class Trades {
             }
         } else {
             // Offer is not active and the items are no longer in trade
-            offer.itemsToGive.forEach(item => {
-                this.unsetItemInTrade = item.assetid;
-            });
+            this.releaseOfferItems(offer);
+            this.clearOfferExpiry(offer);
 
             // Unset items
             offer.data('_ourItems', undefined);
@@ -1943,23 +1972,177 @@ export default class Trades {
         }, 30 * 1000);
     }
 
-    private set setItemInTrade(assetid: string) {
-        const index = this.itemsInTrade.indexOf(assetid);
-
-        if (index === -1) {
-            this.itemsInTrade.push(assetid);
+    private getReservationKey(offer: TradeOffer): string {
+        const storedKey = offer.data('_reservationKey') as string | undefined;
+        if (offer.id !== null) {
+            const offerKey = `offer:${offer.id}`;
+            if (storedKey !== offerKey) {
+                this.moveReservationKey(storedKey, offerKey);
+                offer.data('_reservationKey', offerKey);
+            }
+            return offerKey;
         }
 
-        const fixDuplicate = new Set(this.itemsInTrade);
-        this.itemsInTrade = [...fixDuplicate];
+        if (storedKey !== undefined) {
+            return storedKey;
+        }
+
+        const key = `pending:${++this.reservationSequence}`;
+        offer.data('_reservationKey', key);
+        return key;
     }
 
-    private set unsetItemInTrade(assetid: string) {
-        const index = this.itemsInTrade.indexOf(assetid);
-
-        if (index !== -1) {
-            this.itemsInTrade.splice(index, 1);
+    private moveReservationToOfferId(offer: TradeOffer): void {
+        if (offer.id !== null) {
+            this.getReservationKey(offer);
         }
+    }
+
+    private moveReservationKey(previousKey: string | undefined, nextKey: string): void {
+        if (previousKey === undefined || previousKey === nextKey) {
+            return;
+        }
+
+        const offerItems = this.reservedItemsByOffer.get(previousKey);
+        if (offerItems === undefined) {
+            return;
+        }
+
+        let nextOfferItems = this.reservedItemsByOffer.get(nextKey);
+        if (nextOfferItems === undefined) {
+            nextOfferItems = new Set<string>();
+            this.reservedItemsByOffer.set(nextKey, nextOfferItems);
+        }
+
+        offerItems.forEach(assetid => {
+            nextOfferItems.add(assetid);
+            const reservations = this.itemsInTrade.get(assetid);
+            if (reservations !== undefined) {
+                reservations.delete(previousKey);
+                reservations.add(nextKey);
+            }
+        });
+        this.reservedItemsByOffer.delete(previousKey);
+    }
+
+    private reserveOfferItems(offer: TradeOffer): void {
+        const reservationKey = this.getReservationKey(offer);
+        offer.itemsToGive.forEach(item => this.reserveItem(reservationKey, item.assetid));
+    }
+
+    private reserveItem(reservationKey: string, assetid: string): void {
+        let offerItems = this.reservedItemsByOffer.get(reservationKey);
+        if (offerItems === undefined) {
+            offerItems = new Set<string>();
+            this.reservedItemsByOffer.set(reservationKey, offerItems);
+        }
+
+        if (offerItems.has(assetid)) {
+            return;
+        }
+
+        offerItems.add(assetid);
+
+        let reservations = this.itemsInTrade.get(assetid);
+        if (reservations === undefined) {
+            reservations = new Set<string>();
+            this.itemsInTrade.set(assetid, reservations);
+        }
+        reservations.add(reservationKey);
+    }
+
+    private releaseOfferItems(offer: TradeOffer): void {
+        const reservationKey = this.getReservationKey(offer);
+        const offerItems = this.reservedItemsByOffer.get(reservationKey);
+        if (offerItems === undefined) {
+            return;
+        }
+
+        offerItems.forEach(assetid => {
+            const reservations = this.itemsInTrade.get(assetid);
+            if (reservations === undefined) {
+                return;
+            }
+
+            reservations.delete(reservationKey);
+            if (reservations.size === 0) {
+                this.itemsInTrade.delete(assetid);
+            }
+        });
+        this.reservedItemsByOffer.delete(reservationKey);
+    }
+
+    private isActiveOffer(offer: TradeOffer): boolean {
+        return [
+            TradeOfferManager.ETradeOfferState['Active'],
+            TradeOfferManager.ETradeOfferState['CreatedNeedsConfirmation']
+        ].includes(offer.state);
+    }
+
+    private isExpiringOffer(offer: TradeOffer): boolean {
+        return (
+            this.bot.options.miscSettings.skipItemsInTrade.enable &&
+            this.bot.options.miscSettings.skipItemsInTrade.cancelOfferAfterMinutes > 0 &&
+            offer.isOurOffer &&
+            offer.data('handledByUs') === true &&
+            this.isActiveOffer(offer)
+        );
+    }
+
+    private scheduleOfferExpiry(offer: TradeOffer, retryDelay?: number): void {
+        if (!this.isExpiringOffer(offer)) {
+            return;
+        }
+
+        const reservationKey = this.getReservationKey(offer);
+        this.clearOfferExpiryByKey(reservationKey);
+
+        const createdAt =
+            offer.created instanceof Date && !isNaN(offer.created.valueOf()) ? offer.created.valueOf() : Date.now();
+        const deadline = createdAt + this.bot.options.miscSettings.skipItemsInTrade.cancelOfferAfterMinutes * 60 * 1000;
+        const delay = retryDelay === undefined ? Math.max(0, deadline - Date.now()) : retryDelay;
+
+        const timer = setTimeout(() => {
+            this.offerExpiryTimers.delete(reservationKey);
+            this.expireOffer(offer);
+        }, delay);
+        this.offerExpiryTimers.set(reservationKey, timer);
+    }
+
+    private expireOffer(offer: TradeOffer): void {
+        if (!this.isExpiringOffer(offer)) {
+            return;
+        }
+
+        const reservationKey = this.getReservationKey(offer);
+        if (this.expiringOffers.has(reservationKey)) {
+            return;
+        }
+
+        this.expiringOffers.add(reservationKey);
+        offer.log('info', 'cancelling expired outgoing offer');
+        offer.cancel(err => {
+            this.expiringOffers.delete(reservationKey);
+
+            if (err) {
+                log.warn(`Failed to cancel expired offer #${offer.id}: `, err);
+                // Keep the reservation until Steam confirms the offer is no longer active.
+                this.scheduleOfferExpiry(offer, EXPIRED_OFFER_RETRY_DELAY_MS);
+            }
+        });
+    }
+
+    private clearOfferExpiry(offer: TradeOffer): void {
+        this.clearOfferExpiryByKey(this.getReservationKey(offer));
+    }
+
+    private clearOfferExpiryByKey(reservationKey: string): void {
+        const timer = this.offerExpiryTimers.get(reservationKey);
+        if (timer !== undefined) {
+            clearTimeout(timer);
+            this.offerExpiryTimers.delete(reservationKey);
+        }
+        this.expiringOffers.delete(reservationKey);
     }
 
     static offerEquals(a: TradeOffer, b: TradeOffer): boolean {

@@ -11,6 +11,7 @@ interface FilePaths {
     costBasis: string;
     journalTfSync: string;
     manncoData: string;
+    tradeProtectionAcknowledge: string;
     dir: string;
 }
 
@@ -48,6 +49,7 @@ export default function genPaths(steamAccountName: string, maxPollDataSizeMB = 5
             costBasis: path.join(__dirname, `../../files/${steamAccountName}/costBasis.json`),
             journalTfSync: path.join(__dirname, `../../files/${steamAccountName}/journalTfSync.json`),
             manncoData: path.join(__dirname, `../../files/${steamAccountName}/polldata_mannco.json`),
+            tradeProtectionAcknowledge: path.join(__dirname, `../../files/${steamAccountName}/tpa.json`),
             dir: path.join(__dirname, `../../files/${steamAccountName}/`)
         },
         logs: {

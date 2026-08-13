@@ -54,7 +54,7 @@ export default async function sendStats(bot: Bot, forceSend = false, steamID?: S
         embeds: [
             {
                 footer: {
-                    text: `${timeNow(bot.options).time} • v${process.env.BOT_VERSION}`,
+                    text: `${timeNow(bot.options).time} • ${process.env.BOT_VERSION_LABEL}`,
                     icon_url: optDW.avatarURL || botInfo.avatarURL
                 },
                 title: '📊 Statistics 📊',
