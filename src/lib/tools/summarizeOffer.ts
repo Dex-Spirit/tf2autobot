@@ -260,6 +260,7 @@ function getSummary(
             // builds the same note from its own item list, and the two must not
             // be able to drift apart.
             const stock = stockChangeText(bot, priceKey, which, type, amount);
+            const showStock = !(bot.options.tradeSummary.showPureInEmoji && pureEmoji.has(sku));
 
             if (withLink && isTF2Items) {
                 summary.push(
@@ -269,12 +270,12 @@ function getSummary(
                                 ? pureEmoji.get(sku)
                                 : name
                             : name
-                    }](https://pricedb.io/item/${sku})${amount > 1 ? ` x${amount}` : ''} (${stock})`
+                    }](https://pricedb.io/item/${sku})${amount > 1 ? ` x${amount}` : ''}${showStock ? ` (${stock})` : ''}`
                 );
             } else {
                 summary.push(
                     `${name}${amount > 1 ? ` x${amount}` : ''}${
-                        ['review-partner', 'declined'].includes(type) ? '' : ` (${stock})`
+                        ['review-partner', 'declined'].includes(type) || !showStock ? '' : ` (${stock})`
                     }`
                 );
             }
