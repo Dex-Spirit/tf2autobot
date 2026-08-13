@@ -12,6 +12,20 @@ export function stockCardPageCount(entries: StockCardEntry[], pageSize = 20): nu
 }
 
 export type CardRenderRequest =
+    | {
+          type: 'price';
+          sku: string;
+          name: string;
+          buy: string;
+          sell: string;
+          stock: number;
+          limits: string;
+          intent: string;
+          autoprice: boolean;
+          updated?: string;
+          accountName: string;
+          showQualityBorders: boolean;
+      }
     | { type: 'pure'; stock: CurrentPure; accountName: string }
     | { type: 'rate'; buy: string; sell: string; source: string; accountName: string }
     | { type: 'sku-chart'; sku: string; keyRate: number }

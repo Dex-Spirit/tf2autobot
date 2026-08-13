@@ -563,9 +563,11 @@ export const DEFAULTS: JsonOptions = {
             showQualityBorders: true,
             pure: true,
             rate: true,
+            price: true,
             sku: true,
             stock: true,
-            pricelist: true
+            pricelist: true,
+            trade: true
         },
         tradeSummary: {
             enable: true,
@@ -1768,9 +1770,11 @@ interface CommandCards extends OnlyEnable {
     showQualityBorders?: boolean;
     pure?: boolean;
     rate?: boolean;
+    price?: boolean;
     sku?: boolean;
     stock?: boolean;
     pricelist?: boolean;
+    trade?: boolean;
 }
 
 interface TradeSummaryDW extends OnlyEnable {

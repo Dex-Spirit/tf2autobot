@@ -128,7 +128,7 @@ export default async function sendTradeSummary(
     };
     const cardOptions = optDW.tradeSummary.tradeCard;
     const card = cardOptions.enable
-        ? await renderCard(
+        ? await renderTradeCardImage(
               offer,
               bot,
               // The spread carries the card options output of `enable`, which
@@ -716,7 +716,7 @@ function clamp(text: string, limit: number): string {
 }
 
 /** Lazily loaded: a missing or broken native canvas binding must not cost us the summary. */
-async function renderCard(
+export async function renderTradeCardImage(
     offer: TradeOffer,
     bot: Bot,
     options: TradeCardOptions,
@@ -730,7 +730,7 @@ async function renderCard(
     }
 }
 
-function buildTradeCardPayload(
+export function buildTradeCardPayload(
     offer: TradeOffer,
     bot: Bot,
     options: TradeCardOptions,

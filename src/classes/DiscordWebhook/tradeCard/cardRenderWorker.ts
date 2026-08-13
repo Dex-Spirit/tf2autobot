@@ -34,6 +34,23 @@ process.once('message', async (request: CardRenderRequest) => {
     try {
         let image: Buffer | null;
         switch (request.type) {
+            case 'price': {
+                const renderer = await import('./renderPriceCard');
+                image = await renderer.default(
+                    request.sku,
+                    request.name,
+                    request.buy,
+                    request.sell,
+                    request.stock,
+                    request.limits,
+                    request.intent,
+                    request.autoprice,
+                    request.updated,
+                    request.accountName,
+                    request.showQualityBorders
+                );
+                break;
+            }
             case 'pure': {
                 const renderer = await import('./renderPureStockCard');
                 image = await renderer.default(request.stock, request.accountName);
