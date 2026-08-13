@@ -190,6 +190,36 @@ test('loads custom pricer options', () => {
     expect(result.customPricerUrl).toEqual('https://custom-pricer.example.com');
 });
 
+test('validates skipItemsInTrade cancelOfferAfterMinutes', () => {
+    let result = Options.loadOptions({ steamAccountName: 'abc123' });
+    expect(result.miscSettings.skipItemsInTrade.cancelOfferAfterMinutes).toBe(0);
+
+    result = Options.loadOptions({
+        steamAccountName: 'abc123',
+        miscSettings: { skipItemsInTrade: { cancelOfferAfterMinutes: 2 } }
+    });
+    expect(result.miscSettings.skipItemsInTrade.cancelOfferAfterMinutes).toBe(2);
+
+    const optionsPath = Options.getOptionsPath('abc123');
+    const invalidValues = [-1, 1.5, 'two'];
+    invalidValues.forEach(cancelOfferAfterMinutes => {
+        const invalidOptions = {
+            ...defaultOptions,
+            miscSettings: {
+                ...defaultOptions.miscSettings,
+                skipItemsInTrade: {
+                    ...defaultOptions.miscSettings.skipItemsInTrade,
+                    cancelOfferAfterMinutes
+                }
+            }
+        };
+        writeFileSync(optionsPath, JSON.stringify(invalidOptions, null, 4), { encoding: 'utf8' });
+
+        expect(() => Options.loadOptions({ steamAccountName: 'abc123' })).toThrow();
+    });
+    cleanPath(path.dirname(optionsPath));
+});
+
 test('loads journal.tf options', () => {
     let result = Options.loadOptions({ steamAccountName: 'abc123' });
     expect(result.journalTfEnable).toBeFalsy();
