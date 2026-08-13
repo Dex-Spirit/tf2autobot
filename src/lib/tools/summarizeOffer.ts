@@ -71,7 +71,7 @@ export function stockChangeText(bot: Bot, priceKey: string, which: string, type:
     const limit = entry ? `/${entry.max}` : '';
 
     const transition = accepted || inProcess ? `${oldStock} → ` : '';
-    return `${transition}${newStock}${limit}`;
+    return `${!entry ? transition : ''}${newStock}${limit}`;
 }
 
 export function summarizeToChat(
