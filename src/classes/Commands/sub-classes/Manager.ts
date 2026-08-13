@@ -103,7 +103,9 @@ export default class ManagerCommands {
                         steamID,
                         `❌ Maximum backpack size is 4000 slots, using ${params.amount} will exceed that. The maximum amount of ${backpackString}` +
                             ` that can be use is only ${amountCanUse}.` +
-                            ` \n\nTry again with "${prefix}expand craftable=${String(params.craftable)}&amount=${amountCanUse}"`
+                            ` \n\nTry again with "${prefix}expand craftable=${String(
+                                params.craftable
+                            )}&amount=${amountCanUse}"`
                     );
                 }
                 // Else already has 4000 slots
@@ -117,7 +119,9 @@ export default class ManagerCommands {
                         log.error('Error trying to expand inventory: ', err);
                         return this.bot.sendMessage(
                             steamID,
-                            `❌ Failed to expand inventory: ${err.message}.${i > 0 ? `\n\n ⚠️ Used ${i + 1} before failing.` : ''}`
+                            `❌ Failed to expand inventory: ${err.message}.${
+                                i > 0 ? `\n\n ⚠️ Used ${i + 1} before failing.` : ''
+                            }`
                         );
                     }
                 });
@@ -623,6 +627,35 @@ export default class ManagerCommands {
                 const custom = opt.customReply.disabled;
                 return this.bot.sendMessage(steamID, custom ? custom : '❌ This command is disabled by the owner.');
             }
+        }
+
+        if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot) {
+            const pureNow = pure.currPure(this.bot);
+            const userPure = this.bot.handler.autokeys.userPure;
+            const keyPrices = this.bot.pricelist.getKeyPrices;
+            const autokeys = this.bot.handler.autokeys;
+            const status = autokeys.getOverallStatus;
+            const state = !autokeys.getActiveStatus
+                ? 'Not active'
+                : status.isBankingKeys
+                ? 'Banking'
+                : status.isBuyingKeys
+                ? 'Buying keys'
+                : 'Selling keys';
+
+            void this.bot.discordBot.sendV2TextAnswer(
+                steamID.redirectAnswerTo,
+                '⚙️ Autokeys',
+                `**Keys:** ${pureNow.key} current · ${userPure.minKeys} min · ${userPure.maxKeys} max\n` +
+                    `**Ref:** ${Currencies.toRefined(pureNow.refTotalInScrap)} current · ${Currencies.toRefined(
+                        userPure.minRefs
+                    )} min · ${Currencies.toRefined(userPure.maxRefs)} max\n` +
+                    `**Rate:** ${keyPrices.buy.toString()} buy / ${keyPrices.sell.toString()} sell\n` +
+                    `**Scrap adjustment:** ${autokeys.isEnableScrapAdjustment ? 'Enabled' : 'Disabled'}\n` +
+                    `**Auto-banking:** ${autokeys.isKeyBankingEnabled ? 'Enabled' : 'Disabled'}\n` +
+                    `**Status:** ${state}`
+            );
+            return;
         }
 
         this.bot.sendMessage(

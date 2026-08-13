@@ -20,11 +20,18 @@ import Bot from './Bot';
 import SteamID from 'steamid';
 import { uptime } from '../lib/tools/time';
 import { CurrentPure, stock as pureStock } from '../lib/tools/pure';
-import renderPureStockCard from './DiscordWebhook/tradeCard/renderPureStockCard';
-import { renderStockCardPage, stockCardPageCount } from './DiscordWebhook/tradeCard/renderStockCards';
-import type { StockCardEntry } from './DiscordWebhook/tradeCard/renderStockCards';
+import { renderCard } from './DiscordWebhook/tradeCard/cardRenderClient';
+import { stockCardPageCount, StockCardEntry } from './DiscordWebhook/tradeCard/cardRenderProtocol';
+import { Entry } from './Pricelist';
+import { TradeOffer } from '@tf2autobot/tradeoffer-manager';
+import { getPartnerDetails } from './DiscordWebhook/utils';
+import { renderTradeCardImage } from './DiscordWebhook/sendTradeSummary';
+import { TradeCardMeta } from './DiscordWebhook/tradeCard';
+import { generateLinks } from '../lib/tools/export';
+import TradeOfferManager from '@tf2autobot/tradeoffer-manager';
 
 const STOCK_PAGER_TIMEOUT_MS = 15 * 60 * 1000;
+const TRADE_ACTION_TIMEOUT_MS = 15 * 60 * 1000;
 
 interface StockPagerSession {
     requesterId: Snowflake;
@@ -32,8 +39,19 @@ interface StockPagerSession {
     title: string;
     currentPage: number;
     totalPages: number;
+    pageSize: number;
     detailsText?: string;
     message: Message;
+    expiryTimer: NodeJS.Timeout;
+}
+
+interface TradeActionSession {
+    requesterId: Snowflake;
+    offerId: string;
+    force: boolean;
+    action?: 'accept' | 'decline';
+    message: Message;
+    expiryTimer: NodeJS.Timeout;
 }
 
 export default class DiscordBot {
@@ -44,6 +62,8 @@ export default class DiscordBot {
     private MAX_MESSAGE_LENGTH = 2000 - 2; // some characters are reserved
 
     private readonly stockPagers = new Map<string, StockPagerSession>();
+
+    private readonly tradeActions = new Map<string, TradeActionSession>();
 
     constructor(private options: Options, private bot: Bot) {
         this.client = new Client({
@@ -80,6 +100,10 @@ export default class DiscordBot {
                     await this.handleStockPager(interaction);
                     return;
                 }
+                if (interaction.isButton() && interaction.customId.startsWith('trade-action:')) {
+                    await this.handleTradeAction(interaction);
+                    return;
+                }
 
                 if (!interaction.isChatInputCommand()) return;
 
@@ -110,6 +134,12 @@ export default class DiscordBot {
 
     public stop(): void {
         log.info('Logging out from Discord...');
+        for (const session of this.stockPagers.values()) {
+            clearTimeout(session.expiryTimer);
+        }
+        this.stockPagers.clear();
+        for (const session of this.tradeActions.values()) clearTimeout(session.expiryTimer);
+        this.tradeActions.clear();
         void this.client.destroy();
     }
 
@@ -193,9 +223,344 @@ export default class DiscordBot {
         }
     }
 
+    public async sendV2TextAnswer(origMessage: Message, title: string, body: string): Promise<void> {
+        if (!this.isCommandCardEnabled('text')) {
+            this.sendAnswer(origMessage, `${title}\n${body}`);
+            return;
+        }
+        try {
+            await (origMessage.channel as TextChannel).send({
+                flags: MessageFlagsBitField.Flags.IsComponentsV2,
+                components: [
+                    {
+                        type: 17,
+                        accent_color: Number(this.bot.options.discordWebhook.embedColor),
+                        components: [{ type: 10, content: `## ${title}\n${body}` }]
+                    }
+                ] as unknown as MessageCreateOptions['components']
+            });
+        } catch (err) {
+            log.warn('Failed to send Discord Components V2 text response:', err);
+            this.sendAnswer(origMessage, `${title}\n${body}`);
+        }
+    }
+
+    public async sendSkuAnswer(origMessage: Message, name: string, sku: string): Promise<void> {
+        if (!this.isCommandCardEnabled('sku')) {
+            this.sendAnswer(origMessage, `• ${name}\nhttps://pricedb.io/item/${sku}`);
+            return;
+        }
+        const chart = await renderCard({ type: 'sku-chart', sku, keyRate: this.bot.pricelist.getKeyPrices.sell.metal });
+        const components = [
+            {
+                type: 17,
+                accent_color: Number(this.bot.options.discordWebhook.embedColor),
+                components: [
+                    { type: 10, content: `## 🏷️ ${name}\n**SKU:** \`${sku}\`` },
+                    ...(chart ? [{ type: 12, items: [{ media: { url: 'attachment://sku-history.png' } }] }] : [])
+                ]
+            },
+            {
+                type: 1,
+                components: [{ type: 2, style: 5, label: 'Open PriceDB item', url: `https://pricedb.io/item/${sku}` }]
+            }
+        ] as unknown as MessageCreateOptions['components'];
+
+        try {
+            await (origMessage.channel as TextChannel).send({
+                flags: MessageFlagsBitField.Flags.IsComponentsV2,
+                components,
+                files: chart ? [{ attachment: chart, name: 'sku-history.png' }] : []
+            });
+        } catch (err) {
+            log.warn('Failed to send Discord SKU card:', err);
+            this.sendAnswer(origMessage, `• ${name}\nhttps://pricedb.io/item/${sku}`);
+        }
+    }
+
+    /** Send the rich single-item view used by !price, with the old reply as a safe fallback. */
+    public async sendPriceAnswer(origMessage: Message, entry: Entry, stock: number, fallback: string): Promise<void> {
+        if (!this.isCommandCardEnabled('price')) {
+            this.sendAnswer(origMessage, fallback);
+            return;
+        }
+        const intent = entry.intent === 2 ? 'Bank' : entry.intent === 1 ? 'Sell' : 'Buy';
+        const limits =
+            entry.min === 0 && entry.max === -1 ? 'No limits' : `${entry.min}–${entry.max === -1 ? '∞' : entry.max}`;
+        const card = await renderCard({
+            type: 'price',
+            sku: entry.sku,
+            name: entry.name,
+            buy: entry.buy?.toString() ?? 'N/A',
+            sell: entry.sell?.toString() ?? 'N/A',
+            stock,
+            limits,
+            intent,
+            autoprice: entry.autoprice,
+            updated: entry.autoprice && entry.time ? new Date(entry.time * 1000).toLocaleDateString() : undefined,
+            accountName: this.bot.options.steamAccountName,
+            showQualityBorders: this.bot.options.discordWebhook.commandCards?.showQualityBorders !== false
+        });
+        if (card === null) {
+            this.sendAnswer(origMessage, fallback);
+            return;
+        }
+        try {
+            await (origMessage.channel as TextChannel).send({
+                flags: MessageFlagsBitField.Flags.IsComponentsV2,
+                components: [
+                    {
+                        type: 17,
+                        accent_color: Number(this.bot.options.discordWebhook.embedColor),
+                        components: [{ type: 12, items: [{ media: { url: 'attachment://price-card.png' } }] }]
+                    },
+                    {
+                        type: 1,
+                        components: [
+                            {
+                                type: 2,
+                                style: 5,
+                                label: 'Open PriceDB item',
+                                url: `https://pricedb.io/item/${entry.sku}`
+                            }
+                        ]
+                    }
+                ] as unknown as MessageCreateOptions['components'],
+                files: [{ attachment: card, name: 'price-card.png' }]
+            });
+        } catch (err) {
+            log.warn('Failed to send Discord price card; sending text fallback:', err);
+            this.sendAnswer(origMessage, fallback);
+        }
+    }
+
+    public async sendTradeAnswer(
+        origMessage: Message,
+        offer: TradeOffer,
+        reason: string,
+        review: boolean,
+        fallback: string
+    ): Promise<void> {
+        if (!this.isCommandCardEnabled('trade')) return this.sendAnswer(origMessage, fallback);
+        const details = await getPartnerDetails(offer, this.bot);
+        const meta: TradeCardMeta = { timeTakenToComplete: 0, isOfferSent: false, net: null };
+        const card = await renderTradeCardImage(
+            offer,
+            this.bot,
+            {
+                maxItemsPerSide: this.bot.options.discordWebhook.tradeSummary.tradeCard.maxItemsPerSide,
+                showQualityBorders: this.bot.options.discordWebhook.commandCards?.showQualityBorders !== false,
+                partnerName: details.personaName,
+                partnerAvatarUrl: details.avatarFull
+            },
+            meta
+        );
+        if (!card) return this.sendAnswer(origMessage, fallback);
+        const token = randomUUID();
+        const force = !review;
+        const links = generateLinks(offer.partner.toString());
+        const detail = `${reason}${reason ? '\n' : ''}[Steam](${links.steam}) · [backpack.tf](${
+            links.bptf
+        }) · [rep.tf](${links.reptf})`;
+        const components = this.tradeComponents(
+            token,
+            offer.id,
+            review ? 'Pending review' : 'Active offer',
+            detail,
+            force
+        );
+        try {
+            const message = await (origMessage.channel as TextChannel).send({
+                flags: MessageFlagsBitField.Flags.IsComponentsV2,
+                components: components as MessageCreateOptions['components'],
+                files: [{ attachment: card, name: `trade-${offer.id}.png` }]
+            });
+            const expiryTimer = setTimeout(() => void this.expireTradeAction(token), TRADE_ACTION_TIMEOUT_MS);
+            this.tradeActions.set(token, {
+                requesterId: origMessage.author.id,
+                offerId: offer.id,
+                force,
+                message,
+                expiryTimer
+            });
+        } catch (err) {
+            log.warn('Failed to send Discord trade card; sending text fallback:', err);
+            this.sendAnswer(origMessage, fallback);
+        }
+    }
+
+    private tradeComponents(
+        token: string,
+        offerId: string,
+        title: string,
+        reason: string,
+        force: boolean,
+        confirm?: 'accept' | 'decline',
+        terminal?: string
+    ): unknown {
+        const buttons = terminal
+            ? [{ type: 2, style: 2, label: terminal, custom_id: `trade-action:${token}:expired`, disabled: true }]
+            : confirm
+            ? [
+                  {
+                      type: 2,
+                      style: confirm === 'accept' ? 3 : 4,
+                      label: `Confirm ${confirm}`,
+                      custom_id: `trade-action:${token}:confirm:${confirm}`
+                  },
+                  { type: 2, style: 2, label: 'Cancel', custom_id: `trade-action:${token}:cancel` }
+              ]
+            : [
+                  {
+                      type: 2,
+                      style: 3,
+                      label: force ? 'Force Accept' : 'Accept',
+                      custom_id: `trade-action:${token}:choose:accept`
+                  },
+                  {
+                      type: 2,
+                      style: 4,
+                      label: force ? 'Force Decline' : 'Decline',
+                      custom_id: `trade-action:${token}:choose:decline`
+                  }
+              ];
+        return [
+            {
+                type: 17,
+                accent_color: Number(this.bot.options.discordWebhook.embedColor),
+                components: [
+                    { type: 10, content: `## ${terminal ?? `⚠️ ${title}`}${reason ? `\n**Reason:** ${reason}` : ''}` },
+                    { type: 12, items: [{ media: { url: `attachment://trade-${offerId}.png` } }] }
+                ]
+            },
+            { type: 1, components: buttons }
+        ];
+    }
+
+    private async handleTradeAction(interaction: ButtonInteraction): Promise<void> {
+        const [, token, phase, action] = interaction.customId.split(':');
+        const session = this.tradeActions.get(token);
+        if (!session || interaction.user.id !== session.requesterId || !this.isDiscordAdmin(interaction.user.id)) {
+            await interaction.reply({
+                content: 'This trade action has expired or is not yours.',
+                flags: MessageFlagsBitField.Flags.Ephemeral
+            });
+            return;
+        }
+        if (phase === 'choose' && (action === 'accept' || action === 'decline')) {
+            session.action = action;
+            await interaction.update({
+                components: this.tradeComponents(
+                    token,
+                    session.offerId,
+                    'Confirm action',
+                    '',
+                    session.force,
+                    action
+                ) as MessageCreateOptions['components']
+            });
+            return;
+        }
+        if (phase === 'cancel') {
+            await this.finishTradeAction(interaction, token, 'Action cancelled');
+            return;
+        }
+        if (phase !== 'confirm' || session.action !== action || (action !== 'accept' && action !== 'decline')) {
+            await interaction.reply({
+                content: 'This trade action is no longer valid.',
+                flags: MessageFlagsBitField.Flags.Ephemeral
+            });
+            return;
+        }
+        if (this.bot.manager.pollData.received[session.offerId] !== TradeOfferManager.ETradeOfferState['Active']) {
+            await this.finishTradeAction(interaction, token, 'Trade is no longer active');
+            return;
+        }
+        await interaction.deferUpdate();
+        try {
+            await this.bot.handler.commands.useTradeReviewAction(
+                this.getAdminBy(interaction.user.id),
+                session.offerId,
+                session.force,
+                action === 'accept'
+            );
+            await this.finishTradeAction(
+                interaction,
+                token,
+                `✅ ${action === 'accept' ? 'Accept' : 'Decline'} requested`
+            );
+        } catch (err) {
+            log.warn('Discord trade action failed:', err);
+            await this.finishTradeAction(interaction, token, '❌ Action failed');
+        }
+    }
+
+    private async finishTradeAction(interaction: ButtonInteraction, token: string, label: string): Promise<void> {
+        const session = this.tradeActions.get(token);
+        if (!session) return;
+        this.tradeActions.delete(token);
+        clearTimeout(session.expiryTimer);
+        await interaction.message.edit({
+            components: this.tradeComponents(
+                token,
+                session.offerId,
+                '',
+                '',
+                session.force,
+                undefined,
+                label
+            ) as MessageCreateOptions['components']
+        });
+    }
+
+    private async expireTradeAction(token: string): Promise<void> {
+        const session = this.tradeActions.get(token);
+        if (!session) return;
+        this.tradeActions.delete(token);
+        clearTimeout(session.expiryTimer);
+        await session.message
+            .edit({
+                components: this.tradeComponents(
+                    token,
+                    session.offerId,
+                    '',
+                    '',
+                    session.force,
+                    undefined,
+                    'Trade actions expired'
+                ) as MessageCreateOptions['components']
+            })
+            .catch(err => log.debug('Failed to expire trade card:', err));
+    }
+
+    public async sendRateAnswer(origMessage: Message, buy: string, sell: string, source: string): Promise<void> {
+        if (!this.isCommandCardEnabled('rate')) {
+            this.sendAnswer(origMessage, `Key rate: ${buy} / ${sell} (${source})`);
+            return;
+        }
+        const card = await renderCard({
+            type: 'rate',
+            buy,
+            sell,
+            source,
+            accountName: this.bot.options.steamAccountName
+        });
+        if (card === null)
+            return this.sendV2TextAnswer(
+                origMessage,
+                'Key Rate',
+                `**Buy:** ${buy}\n**Sell:** ${sell}\n**Source:** ${source}`
+            );
+        await this.sendCardGallery(origMessage, [card], 'key-rate', `Key rate: ${buy} / ${sell}`);
+    }
+
     public async sendPureStockAnswer(origMessage: Message, stock: CurrentPure): Promise<void> {
         const fallback = `💰 I have ${pureStock(this.bot).join(' and ')} in my inventory.`;
-        const card = await renderPureStockCard(stock, this.bot.options.steamAccountName);
+        if (!this.isCommandCardEnabled('pure')) {
+            this.sendAnswer(origMessage, fallback);
+            return;
+        }
+        const card = await renderCard({ type: 'pure', stock, accountName: this.bot.options.steamAccountName });
         if (card === null) {
             this.sendAnswer(origMessage, fallback);
             return;
@@ -209,10 +574,24 @@ export default class DiscordBot {
         entries: StockCardEntry[],
         title: string,
         fallback: string,
-        detailsText?: string
+        detailsText?: string,
+        pageSize = 20,
+        category: 'stock' | 'pricelist' = 'stock'
     ): Promise<void> {
-        const totalPages = stockCardPageCount(entries);
-        const card = await renderStockCardPage(entries, this.bot.options.steamAccountName, title, 0);
+        if (!this.isCommandCardEnabled(category)) {
+            this.sendAnswer(origMessage, fallback);
+            return;
+        }
+        const totalPages = stockCardPageCount(entries, pageSize);
+        const card = await renderCard({
+            type: 'stock',
+            entries,
+            accountName: this.bot.options.steamAccountName,
+            title,
+            pageIndex: 0,
+            pageSize,
+            showQualityBorders: this.bot.options.discordWebhook.commandCards?.showQualityBorders !== false
+        });
         if (card === null) {
             this.sendAnswer(origMessage, fallback);
             return;
@@ -226,8 +605,9 @@ export default class DiscordBot {
                 title,
                 currentPage: 0,
                 totalPages,
+                pageSize,
                 detailsText
-            } as Omit<StockPagerSession, 'message'>;
+            } as Omit<StockPagerSession, 'message' | 'expiryTimer'>;
             const message = await (origMessage.channel as TextChannel).send({
                 flags: MessageFlagsBitField.Flags.IsComponentsV2,
                 components: this.stockPagerComponents(session, token),
@@ -235,8 +615,8 @@ export default class DiscordBot {
             });
 
             if (totalPages > 1) {
-                this.stockPagers.set(token, { ...session, message });
-                setTimeout(() => void this.expireStockPager(token), STOCK_PAGER_TIMEOUT_MS);
+                const expiryTimer = setTimeout(() => void this.expireStockPager(token), STOCK_PAGER_TIMEOUT_MS);
+                this.stockPagers.set(token, { ...session, message, expiryTimer });
             }
         } catch (err) {
             log.warn('Failed to send Discord stock card; sending text fallback:', err);
@@ -310,6 +690,13 @@ export default class DiscordBot {
         ] as unknown as MessageCreateOptions['components'];
     }
 
+    private isCommandCardEnabled(
+        category: 'text' | 'pure' | 'rate' | 'price' | 'sku' | 'stock' | 'pricelist' | 'trade'
+    ): boolean {
+        const commandCards = this.bot.options.discordWebhook.commandCards;
+        return commandCards?.enable !== false && commandCards?.[category] !== false;
+    }
+
     private async handleStockPager(interaction: ButtonInteraction): Promise<void> {
         const [, token, direction] = interaction.customId.split(':');
         const session = this.stockPagers.get(token);
@@ -336,7 +723,15 @@ export default class DiscordBot {
         }
 
         await interaction.deferUpdate();
-        const card = await renderStockCardPage(session.entries, this.bot.options.steamAccountName, session.title, page);
+        const card = await renderCard({
+            type: 'stock',
+            entries: session.entries,
+            accountName: this.bot.options.steamAccountName,
+            title: session.title,
+            pageIndex: page,
+            pageSize: session.pageSize,
+            showQualityBorders: this.bot.options.discordWebhook.commandCards?.showQualityBorders !== false
+        });
         if (card === null) return;
 
         session.currentPage = page;
@@ -352,6 +747,7 @@ export default class DiscordBot {
         if (session === undefined) return;
 
         this.stockPagers.delete(token);
+        clearTimeout(session.expiryTimer);
         try {
             await session.message.edit({ components: this.stockPagerComponents(session, undefined, true) });
         } catch (err) {

@@ -6,6 +6,7 @@ import SKU from '@tf2autobot/tf2-sku';
 import Currencies from '@tf2autobot/tf2-currencies';
 import pluralize from 'pluralize';
 import dayjs from 'dayjs';
+import { Message as DiscordMessage } from 'discord.js';
 import * as timersPromises from 'timers/promises';
 import { UnknownDictionary, UnknownDictionaryKnownValues } from '../../../types/common';
 import { removeLinkProtocol, getItemFromParams, normalizeUsdParameterAliases } from '../functions/utils';
@@ -16,6 +17,7 @@ import validator from '../../../lib/validator';
 import { testPriceKey } from '../../../lib/tools/export';
 import IPricer from '../../IPricer';
 import { Currency } from 'src/types/TeamFortress2';
+import type { StockCardEntry } from '../../DiscordWebhook/tradeCard/renderStockCards';
 
 // Pricelist manager
 
@@ -30,6 +32,24 @@ export default class PricelistManagerCommands {
 
     constructor(private readonly bot: Bot, private priceSource: IPricer) {
         this.bot = bot;
+    }
+
+    /** Shared card row for pricelist and filtered-pricelist Discord galleries. */
+    private toPricelistCardEntry(entry: Entry, priceKey = entry.id ?? entry.sku): StockCardEntry {
+        const stock = this.bot.inventoryManager.getInventory.getAmount({
+            priceKey,
+            includeNonNormalized: false,
+            tradableOnly: true
+        });
+        const intent = entry.intent === 2 ? 'BANK' : entry.intent === 1 ? 'SELL' : 'BUY';
+        return {
+            sku: entry.sku,
+            name: entry.name,
+            amount: stock,
+            details: `${stock}/${entry.min}-${entry.max} · ${intent} · ${entry.enabled ? 'ON' : 'OFF'} · ${
+                entry.autoprice ? 'AUTO' : 'MANUAL'
+            } · ${entry.isPartialPriced ? 'PPU' : 'STD'}`
+        };
     }
 
     async addCommand(steamID: SteamID, message: string): Promise<void> {
@@ -2074,6 +2094,28 @@ export default class PricelistManagerCommands {
         if (match === null) {
             this.bot.sendMessage(steamID, `❌ Could not find item "${priceKey}" in the pricelist`);
         } else {
+            if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot) {
+                const stock = this.bot.inventoryManager.getInventory.getAmount({
+                    priceKey: match.id ?? match.sku,
+                    includeNonNormalized: false,
+                    tradableOnly: true
+                });
+                void this.bot.discordBot.sendV2TextAnswer(
+                    steamID.redirectAnswerTo,
+                    `📦 ${match.name}`,
+                    `**SKU:** \`${match.sku}\`\n` +
+                        `**Buy / Sell:** ${match.buy?.toString() ?? 'N/A'} / ${match.sell?.toString() ?? 'N/A'}\n` +
+                        `**Stock:** ${stock} · **Limits:** ${match.min}–${match.max}\n` +
+                        `**Intent:** ${match.intent === 2 ? 'Bank' : match.intent === 1 ? 'Sell' : 'Buy'}\n` +
+                        `**Enabled:** ${match.enabled ? 'Yes' : 'No'} · **Autoprice:** ${
+                            match.autoprice ? 'Yes' : 'No'
+                        }\n` +
+                        `**PPU:** ${match.isPartialPriced ? 'Enabled' : 'Disabled'}${
+                            match.group ? `\n**Group:** ${match.group}` : ''
+                        }`
+                );
+                return;
+            }
             this.bot.sendMessage(steamID, `/code ${this.generateOutput(match)}`);
         }
     }
@@ -2126,19 +2168,41 @@ export default class PricelistManagerCommands {
         const limit = params.limit === undefined ? 15 : (params.limit as number) <= 0 ? -1 : (params.limit as number);
 
         PricelistManagerCommands.isSending = true;
-        this.bot.sendMessage(
-            steamID,
-            `Found ${pluralize('item', listCount, true)} in your pricelist${
-                limit !== -1 && params.limit === undefined && listCount > 15
-                    ? `, showing only ${limit} items (you can send with parameter limit=-1 to list all)`
-                    : `${
-                          limit < listCount && limit > 0 && params.limit !== undefined ? ` (limit set to ${limit})` : ''
-                      }.`
-            }\n\n 📌 #. "sku|id" - "name" ("Current Stock", "min", "max", "intent", "enabled", "autoprice", "group", "isPartialPriced", *"promoted")\n\n` +
-                '* - Only shown if your account is Backpack.tf Premium\n\n.'
-        );
+        if (!(steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot)) {
+            this.bot.sendMessage(
+                steamID,
+                `Found ${pluralize('item', listCount, true)} in your pricelist${
+                    limit !== -1 && params.limit === undefined && listCount > 15
+                        ? `, showing only ${limit} items (you can send with parameter limit=-1 to list all)`
+                        : `${
+                              limit < listCount && limit > 0 && params.limit !== undefined
+                                  ? ` (limit set to ${limit})`
+                                  : ''
+                          }.`
+                }\n\n 📌 #. "sku|id" - "name" ("Current Stock", "min", "max", "intent", "enabled", "autoprice", "group", "isPartialPriced", *"promoted")\n\n` +
+                    '* - Only shown if your account is Backpack.tf Premium\n\n.'
+            );
+        }
 
         const applyLimit = limit === -1 ? listCount : limit;
+        if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot) {
+            const entries: StockCardEntry[] = Object.keys(pricelist)
+                .slice(0, applyLimit)
+                .map(priceKey => this.toPricelistCardEntry(pricelist[priceKey], priceKey));
+            await this.bot.discordBot.sendStockGalleryAnswer(
+                steamID.redirectAnswerTo,
+                entries,
+                'Pricelist',
+                list.join('\n'),
+                `**${pluralize('item', listCount, true)} in pricelist**${
+                    applyLimit < listCount ? ` · showing ${applyLimit}` : ''
+                }\n📦 Stock · quantity badge\n⚙️ Use \`!get sku=<sku>\` for full settings.`,
+                8,
+                'pricelist'
+            );
+            PricelistManagerCommands.isSending = false;
+            return;
+        }
         const loops = Math.ceil(applyLimit / 15);
 
         for (let i = 0; i < loops; i++) {
@@ -2228,6 +2292,37 @@ export default class PricelistManagerCommands {
         );
 
         const applyLimit = limit === -1 ? listCount : limit;
+        if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot) {
+            const entries: StockCardEntry[] = Object.keys(pricelist)
+                .slice(0, applyLimit)
+                .map(sku => {
+                    const entry = pricelist[sku];
+                    const stock = this.bot.inventoryManager.getInventory.getAmount({
+                        priceKey: sku,
+                        includeNonNormalized: false,
+                        tradableOnly: true
+                    });
+                    return {
+                        sku,
+                        name: entry.name,
+                        amount: stock,
+                        details: `${stock}/${entry.min}-${entry.max} · PPU`
+                    };
+                });
+            await this.bot.discordBot.sendStockGalleryAnswer(
+                steamID.redirectAnswerTo,
+                entries,
+                'Partial Price Update',
+                list.join('\n'),
+                `**${pluralize('item', listCount, true)} with PPU enabled**${
+                    applyLimit < listCount ? ` · showing ${applyLimit}` : ''
+                }\n📈 Quantity badges show current tradable stock.`,
+                8,
+                'pricelist'
+            );
+            PricelistManagerCommands.isSending = false;
+            return;
+        }
         const loops = Math.ceil(applyLimit / 15);
 
         for (let i = 0; i < loops; i++) {
@@ -2538,6 +2633,24 @@ export default class PricelistManagerCommands {
             );
 
             const applyLimit = limit === -1 ? listCount : limit;
+            if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot) {
+                const entries: StockCardEntry[] = filter
+                    .slice(0, applyLimit)
+                    .map(entry => this.toPricelistCardEntry(entry));
+                await this.bot.discordBot.sendStockGalleryAnswer(
+                    steamID.redirectAnswerTo,
+                    entries,
+                    'Pricelist Search',
+                    list.join('\n'),
+                    `**${pluralize('item', filterCount, true)} found**\n🔍 ${display.join(' · ')}${
+                        applyLimit < listCount ? ` · showing ${applyLimit}` : ''
+                    }`,
+                    8,
+                    'pricelist'
+                );
+                PricelistManagerCommands.isSending = false;
+                return;
+            }
             const loops = Math.ceil(applyLimit / 15);
 
             for (let i = 0; i < loops; i++) {
