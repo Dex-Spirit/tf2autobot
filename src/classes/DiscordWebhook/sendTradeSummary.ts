@@ -362,6 +362,7 @@ interface LinkedEntry {
     amount: number;
     value: number;
     stock: string;
+    isPureEmoji: boolean;
 }
 
 /** Collects one side's tradeable entries, pure sorted after real items — the same order the card's tiles use. */
@@ -406,8 +407,9 @@ function collectLinkedEntries(
                 // about which side of the trade the inventory has already seen.
                 stock:
                     showStock && !(showPureEmoji && t.pureEmoji.has(sku))
-                    ? t.stockChangeText(bot, priceKey, which, 'summary-accepted', amount)
-                    : ''
+                        ? t.stockChangeText(bot, priceKey, which, 'summary-accepted', amount)
+                        : '',
+                isPureEmoji: showPureEmoji && t.pureEmoji.has(sku)
             };
 
             // Pure is what the trade was *paid in*, so it sorts after what was
@@ -435,10 +437,7 @@ interface LinkDetail {
 function formatLinkedEntry(e: LinkedEntry, detail: LinkDetail): string {
     const name = clamp(e.name, detail.nameCap);
     const label = detail.links ? `[${name}](https://pricedb.io/item/${e.sku})` : name;
-    const amount =
-    e.amount > 1 || (bot.options.tradeSummary.showPureInEmoji && t.pureEmoji.has(e.sku))
-        ? ` ×${e.amount}`
-        : '';
+    const amount = e.amount > 1 || e.isPureEmoji ? ` ×${e.amount}` : '';
     const stock = detail.stock && e.stock ? ` (${e.stock})` : '';
     return `${label}${amount}${stock}`;
 }
