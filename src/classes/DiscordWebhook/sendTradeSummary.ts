@@ -435,7 +435,10 @@ interface LinkDetail {
 function formatLinkedEntry(e: LinkedEntry, detail: LinkDetail): string {
     const name = clamp(e.name, detail.nameCap);
     const label = detail.links ? `[${name}](https://pricedb.io/item/${e.sku})` : name;
-    const amount = e.amount > 1 ? ` ×${e.amount}` : '';
+    const amount =
+    e.amount > 1 || (bot.options.tradeSummary.showPureInEmoji && t.pureEmoji.has(e.sku))
+        ? ` ×${e.amount}`
+        : '';
     const stock = detail.stock && e.stock ? ` (${e.stock})` : '';
     return `${label}${amount}${stock}`;
 }
