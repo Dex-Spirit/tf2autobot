@@ -259,7 +259,10 @@ function getSummary(
             // Extracted rather than inlined twice: the Discord trade summary
             // builds the same note from its own item list, and the two must not
             // be able to drift apart.
-            const stock = stockChangeText(bot, priceKey, which, type, amount);
+            const stock =
+                bot.options.tradeSummary.showPureInEmoji && pureEmoji.has(sku)
+                    ? ''
+                    : stockChangeText(bot, priceKey, which, type, amount);
 
             if (withLink && isTF2Items) {
                 summary.push(
@@ -269,12 +272,12 @@ function getSummary(
                                 ? pureEmoji.get(sku)
                                 : name
                             : name
-                    }](https://pricedb.io/item/${sku})${amount > 1 ? ` x${amount}` : ''} (${stock})`
+                    }](https://pricedb.io/item/${sku})${amount > 1 ? ` x${amount}` : ''}${stock ? ` (${stock})` : ''}`
                 );
             } else {
                 summary.push(
                     `${name}${amount > 1 ? ` x${amount}` : ''}${
-                        ['review-partner', 'declined'].includes(type) ? '' : ` (${stock})`
+                        ['review-partner', 'declined'].includes(type) ? '' : stock ? ` (${stock})` : ''
                     }`
                 );
             }

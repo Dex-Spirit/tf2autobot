@@ -404,7 +404,10 @@ function collectLinkedEntries(
                 value: valueOf(priceKey),
                 // Shared with the text summary so the two can never disagree
                 // about which side of the trade the inventory has already seen.
-                stock: showStock ? t.stockChangeText(bot, priceKey, which, 'summary-accepted', amount) : ''
+                stock:
+                    showStock && !(showPureEmoji && t.pureEmoji.has(sku))
+                    ? t.stockChangeText(bot, priceKey, which, 'summary-accepted', amount)
+                    : ''
             };
 
             // Pure is what the trade was *paid in*, so it sorts after what was
