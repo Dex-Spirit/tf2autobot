@@ -272,11 +272,15 @@ function getSummary(
                                 ? pureEmoji.get(sku)
                                 : name
                             : name
-                    }](https://pricedb.io/item/${sku})${amount > 1 ? ` x${amount}` : ''}${stock ? ` (${stock})` : ''}`
+                    }](https://pricedb.io/item/${sku})${amount > 1 || (bot.options.tradeSummary.showPureInEmoji && pureEmoji.has(sku))
+    ? ` x${amount}`
+    : ''}${stock ? ` (${stock})` : ''}`
                 );
             } else {
                 summary.push(
-                    `${name}${amount > 1 ? ` x${amount}` : ''}${
+                    `${name}${amount > 1 || (bot.options.tradeSummary.showPureInEmoji && pureEmoji.has(sku))
+    ? ` x${amount}`
+    : ''}${
                         ['review-partner', 'declined'].includes(type) ? '' : stock ? ` (${stock})` : ''
                     }`
                 );
@@ -290,10 +294,14 @@ function getSummary(
                                 ? pureEmoji.get(sku)
                                 : name
                             : name
-                    }](https://pricedb.io/item/${sku})${amount > 1 ? ` x${amount}` : ''}`
+                    }](https://pricedb.io/item/${sku})${amount > 1 || (bot.options.tradeSummary.showPureInEmoji && pureEmoji.has(sku))
+    ? ` x${amount}`
+    : ''}`
                 );
             } else {
-                summary.push(name + (amount > 1 ? ` x${amount}` : ''));
+                summary.push(name + (amount > 1 || (bot.options.tradeSummary.showPureInEmoji && pureEmoji.has(sku))
+    ? ` x${amount}`
+    : ''));
             }
         }
     }
